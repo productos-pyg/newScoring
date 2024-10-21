@@ -1,14 +1,5 @@
 import mongoose from "mongoose";
 
-const EmparejamientoSchema = new mongoose.Schema({
-  fase: String,
-  equipo1: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
-  equipo2: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
-  ganador: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
-  calificacionEquipo1: { type: mongoose.Schema.Types.ObjectId, ref: 'Calificacion' },
-  calificacionEquipo2: { type: mongoose.Schema.Types.ObjectId, ref: 'Calificacion' },
-});
-
 const RetoSchema = new mongoose.Schema(
   {
     nombre: {
@@ -78,12 +69,6 @@ const RetoSchema = new mongoose.Schema(
       ref: "Torneo",
       required: [true, "Por favor proporciona el ID del torneo asociado"],
     },
-    fase: {
-      type: String,
-      enum: ['clasificatoria', 'cuartos', 'semifinal', 'final'],
-      default: 'clasificatoria'
-    },
-    emparejamientos: [EmparejamientoSchema]
   },
   {
     timestamps: true,
