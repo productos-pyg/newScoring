@@ -2,33 +2,6 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Reto from "@/models/Reto";
 
-/* export async function GET(request, { params }) {
-  await dbConnect();
-  const reto = await Reto.findById(params.id).populate("torneo", "nombre");
-  if (!reto) {
-    return NextResponse.json({ error: "Reto no encontrado" }, { status: 404 });
-  }
-  return NextResponse.json(reto);
-} */
-
-/*   export async function GET(request, { params }) {
-    await dbConnect();
-    try {
-      const reto = await Reto.findById(params.id).populate({
-        path: 'emparejamientos',
-        populate: { path: 'equipo1 equipo2', select: 'nombre' }
-      });
-      
-      if (!reto) {
-        return NextResponse.json({ error: 'Reto no encontrado' }, { status: 404 });
-      }
-      
-      return NextResponse.json(reto);
-    } catch (error) {
-      console.error('Error al obtener el reto:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-  } */
 
     export async function GET(request, { params }) {
       await dbConnect();
