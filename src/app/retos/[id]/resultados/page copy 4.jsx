@@ -10,7 +10,6 @@ export default function ResultadosRetoPage({ params }) {
   const [error, setError] = useState(null);
   const [puedeAvanzar, setPuedeAvanzar] = useState(false);
   const [puedeAvanzarSemis, setPuedeAvanzarSemis] = useState(false);
-  const [puedeAvanzarFinal, setPuedeAvanzarFinal] = useState(false);
 
   const calcularPuntuacionTotal = (intentos, tipoReto) => {
     if (!intentos || intentos.length === 0) return 0;
@@ -28,22 +27,28 @@ export default function ResultadosRetoPage({ params }) {
       try {
         const resReto = await axios.get(`/api/retos/${params.id}`);
         setReto(resReto.data);
-        
+        console.log('Reto obtenido:', resReto.data);
+
+        // Si el reto está en fase de cuartos, verificamos si puede avanzar a semis
+        if (resReto.data.fase === 'cuartos') {
+          const todosCalificados = resReto.data.emparejamientos.every(
+            emp => emp.ganador != null
+          );
+          setPuedeAvanzarSemis(todosCalificados);
+        }
+
         const resCalificaciones = await axios.get(`/api/calificaciones/resultados?retoId=${params.id}`);
+        console.log('Calificaciones recibidas:', resCalificaciones.data);
+
         const calificaciones = resCalificaciones.data;
 
         if (calificaciones.length === 0) {
+          console.log('No se encontraron calificaciones');
           setResultados([]);
           return;
         }
 
-        // Filtrar solo las calificaciones que NO tienen emparejamientos
-        // (es decir, solo las de fase clasificatoria)
-        const calificacionesClasificatoria = calificaciones.filter(
-          calificacion => !calificacion.emparejamiento
-        );
-
-        const resultadosFinales = calificacionesClasificatoria.map(calificacion => ({
+        const resultadosFinales = calificaciones.map(calificacion => ({
           id: calificacion._id,
           equipo: calificacion.equipo,
           intentos: calificacion.intentos,
@@ -52,24 +57,10 @@ export default function ResultadosRetoPage({ params }) {
 
         resultadosFinales.sort((a, b) => b.puntuacionTotal - a.puntuacionTotal);
         setResultados(resultadosFinales);
+        console.log('Resultados finales:', resultadosFinales);
 
-        // Verificaciones de fase para los botones
-        if (resReto.data.fase === 'semifinal') {
-          const todosCalificados = resReto.data.emparejamientos.every(
-            emp => emp.ganador != null
-          );
-          setPuedeAvanzarFinal(todosCalificados);
-        }
-
-        if (resReto.data.fase === 'cuartos') {
-          const todosCalificados = resReto.data.emparejamientos.every(
-            emp => emp.ganador != null
-          );
-          setPuedeAvanzarSemis(todosCalificados);
-        }
-
+        // Verificar si se puede avanzar de fase
         setPuedeAvanzar(resultadosFinales.length >= 8 && resReto.data.fase === 'clasificatoria');
-
       } catch (error) {
         console.error('Error al obtener los resultados:', error);
         setError(error.message || 'Ocurrió un error al cargar los resultados');
@@ -79,20 +70,11 @@ export default function ResultadosRetoPage({ params }) {
   }, [params.id]);
 
   const avanzarFase = async () => {
-    const faseActual = reto.fase;
-    const mensaje = faseActual === 'clasificatoria' 
-      ? '¿Estás seguro de que quieres avanzar a cuartos de final?' 
-      : faseActual === 'cuartos'
-      ? '¿Estás seguro de que quieres avanzar a semifinales?'
-      : '¿Estás seguro de que quieres avanzar a la fase final?';
-
-    if (window.confirm(mensaje + ' Esta acción no se puede deshacer.')) {
+    if (window.confirm('¿Estás seguro de que quieres avanzar a la siguiente fase? Esta acción no se puede deshacer.')) {
       try {
         const endpoint = reto.fase === 'clasificatoria' 
           ? `/api/retos/${params.id}/avanzarFase`
-          : reto.fase === 'cuartos'
-          ? `/api/retos/${params.id}/avanzarSemifinal`
-          : `/api/retos/${params.id}/avanzarFinal`;
+          : `/api/retos/${params.id}/avanzarSemifinal`;
 
         const response = await axios.post(endpoint);
         alert('Se ha avanzado a la siguiente fase exitosamente.');
@@ -164,19 +146,10 @@ export default function ResultadosRetoPage({ params }) {
         </button>
       )}
 
-      {puedeAvanzarFinal && reto.fase === 'semifinal' && (
-        <button
-          onClick={avanzarFase}
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
-        >
-          Avanzar a Fase Final
-        </button>
-      )}
-
       {reto.fase !== 'clasificatoria' && (
         <Link 
           href={`/retos/${reto._id}/brackets`} 
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-4 ml-4 inline-block"
+          className="bg-blue-500 text-white px-4 py-2 rounded mt-4 inline-block ml-2"
         >
           Ver Brackets de Eliminación
         </Link>

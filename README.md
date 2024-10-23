@@ -2,7 +2,7 @@
 
 ## 🤖 Descripción General
 
-Sistema web completo para la gestión y calificación de torneos de robótica, desarrollado con Next.js 14. Permite organizar torneos, gestionar retos, equipos y calificaciones, con soporte para diferentes tipos de competencias y un sistema de eliminatorias.
+Sistema web completo para la gestión y calificación de torneos de robótica, desarrollado con Next.js 14. Permite organizar torneos, gestionar retos, equipos y calificaciones, con soporte para diferentes tipos de competencias y un sistema completo de eliminatorias.
 
 ## ✨ Características Principales
 
@@ -14,8 +14,17 @@ Sistema web completo para la gestión y calificación de torneos de robótica, d
 ### Retos y Competencias
 - Soporte para múltiples tipos de retos:
   - 🔥 FireFighting
+    - Sistema de puntuación basado en velas apagadas
+    - Bonificaciones por tiempo restante
+    - Penalizaciones por intervención
   - ↗️ LineFollowing
+    - Puntuación por checkpoints completados
+    - Sistema de pelotas adicionales
+    - Bonificación por recorrido completo
   - 🗺️ Exploradores
+    - Sistema de puntos por letras encontradas
+    - Penalizaciones por obstáculos
+    - Bonificación por tiempo
   - 👶 BabyExploradores
   - 🤖 RecolectorObjetos
 - Sistema de puntuación específico por tipo de reto
@@ -37,10 +46,30 @@ Sistema web completo para la gestión y calificación de torneos de robótica, d
 - Calificación en tiempo real
 
 ### Sistema de Competencia
-- Fase clasificatoria
-- Sistema de brackets para eliminatorias
-- Generación automática de emparejamientos
-- Seguimiento de avance en el torneo
+#### Fase Clasificatoria
+- Múltiples intentos por equipo
+- Cálculo automático de mejores puntuaciones
+- Ranking en tiempo real
+- Clasificación automática de los 8 mejores equipos
+
+#### Sistema de Eliminatorias
+- Cuartos de Final
+  - Emparejamientos automáticos (1° vs 8°, 2° vs 7°, etc.)
+  - Calificación de enfrentamientos directos
+- Semifinales
+  - Avance automático de ganadores
+  - Registro de perdedores para tercer puesto
+- Fase Final
+  - Final por el campeonato
+  - Disputa por el tercer lugar
+  - Podio visual con los tres primeros lugares
+  - Identificación clara de campeón, subcampeón y tercer lugar
+
+### Visualización de Resultados
+- Tabla de clasificación en fase inicial
+- Sistema de brackets para fases eliminatorias
+- Podio interactivo para resultados finales
+- Histórico de enfrentamientos y puntuaciones
 
 ## 🛠️ Stack Tecnológico
 
@@ -78,13 +107,47 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── calificaciones/
+│   │   │   ├── route.js
+│   │   │   ├── [id]/route.js
+│   │   │   └── resultados/route.js
 │   │   ├── equipos/
+│   │   │   ├── route.js
+│   │   │   └── [id]/route.js
 │   │   ├── retos/
+│   │   │   ├── route.js
+│   │   │   └── [id]/
+│   │   │       ├── route.js
+│   │   │       ├── avanzarFase/route.js
+│   │   │       ├── avanzarSemifinal/route.js
+│   │   │       ├── avanzarFinal/route.js
+│   │   │       └── calificar-enfrentamiento/route.js
 │   │   └── torneos/
+│   │       ├── route.js
+│   │       └── [id]/route.js
 │   ├── equipos/
+│   │   └── [id]/
+│   │       ├── page.jsx
+│   │       └── editar/page.jsx
 │   ├── jueces/
+│   │   ├── page.jsx
+│   │   ├── calificar/
+│   │   │   └── [retoId]/
+│   │   │       └── [equipoId]/page.jsx
+│   │   └── calificar-enfrentamiento/
+│   │       └── [retoId]/
+│   │           └── [emparejamientoId]/page.jsx
 │   ├── retos/
+│   │   └── [id]/
+│   │       ├── page.jsx
+│   │       ├── brackets/page.jsx
+│   │       ├── editar/page.jsx
+│   │       └── resultados/page.jsx
 │   └── torneos/
+│       ├── page.jsx
+│       ├── crear/page.jsx
+│       └── [id]/
+│           ├── page.jsx
+│           └── editar/page.jsx
 ├── lib/
 │   └── mongodb.js
 └── models/
@@ -123,7 +186,15 @@ src/
     max: Number
   },
   fase: Enum['clasificatoria', 'cuartos', 'semifinal', 'final'],
-  emparejamientos: [EmparejamientoSchema]
+  emparejamientos: [{
+    fase: String,
+    tipo: Enum['final', 'tercerPuesto'],
+    equipo1: ObjectId,
+    equipo2: ObjectId,
+    ganador: ObjectId,
+    calificacionEquipo1: ObjectId,
+    calificacionEquipo2: ObjectId
+  }]
 }
 ```
 
@@ -143,6 +214,22 @@ src/
 }
 ```
 
+### Calificacion
+```javascript
+{
+  equipo: ObjectId,
+  reto: ObjectId,
+  juez: ObjectId,
+  intentos: [{
+    numero: Number,
+    puntuacion: Number,
+    detallesTareas: String,
+    tiempoUtilizado: Number,
+    noRealizado: Boolean
+  }],
+  puntuacionTotal: Number
+}
+```
 ## 🚀 Configuración e Instalación
 
 1. Clonar el repositorio
@@ -165,6 +252,7 @@ MONGODB_URI=tu_uri_de_mongodb
 npm run dev
 ```
 
+
 ## 🔄 Flujo de Trabajo
 
 ### Gestión de Torneos
@@ -177,33 +265,66 @@ npm run dev
 2. Asignar participantes
 3. Vincular con retos
 
-### Proceso de Calificación
-1. Los jueces acceden al panel de calificación
-2. Seleccionan el reto y equipo
-3. Registran puntuaciones según criterios
-4. Sistema calcula totales automáticamente
+### Proceso de Competencia
+1. Fase Clasificatoria
+  - Registro de equipos en retos
+  - Calificacion de intentos según tipo de reto
+  - Calsificación de los 8 mejores equipos
+2. Cuartos de Final
+  - Generación automática de emparejamientos
+  - Calificación de enfrentamientos directos
+  - Avance de ganadores a semifinales
+3. Semifinales
+  - Enfrentamientos entre ganadores de cuartos
+  - Registro de ganadores y perdedores
+  - Preparación para fase final
+4. Vincular con retos
+  - Final por el campeonato
+  - Disputa por el tercer lugar
+  - Visualización del podio final
 
-### Fases Eliminatorias
-1. Sistema genera brackets automáticamente
-2. Jueces califican enfrentamientos
+### Sistema de Calificación
+1. Fase Clasificatoria:
+  - Multiple intentos según tipo de reto
+  - Cálculo de mejores puntuaciones
+  - Ranking automático
+2. Fases Eliminatorias:
+  - Un intento por equipo en cada enfrentamiento
+  - Posibilidad de segundo intento en caso de empate
+  - Decisión manual del juez si persiste el empate
+
+### Visualización de Resultados
+1. Durante la Competencia:
+  - Tabla de clasificación en tiempo real
+  - Brackets de eliminatorias
+  - Estado actual de enfrentamientos
+2. Resultados Finales:
+  - Podio visual con los tres primeros lugares
+  - Histórico de enfrentamientos
+  - Estadísticas por equipo
 3. Avance automático de ganadores
 
-## 🛣️ Próximos Pasos
+## 🛣️ Próximos Pasos y Mejoras Planificadas
 
-- [ ] Implementación de sistema de autenticación
+- [ ] Sistema de autenticación para jueces y administradores
 - [ ] Dashboard de estadísticas
-- [ ] Sistema de notificaciones
-- [ ] Exportación de resultados
-- [ ] Gestión de semifinales y finales
-- [ ] Sistema de gestión de conflictos/empates
+- [ ] Sistema de notificaciones en tiempo real
+- [ ] Exportación de resultados en múltiples formatos
+- [ ] Configuración de reglas personalizadas por torneo
+- [ ] Sistema de gestión de conflictos y apelaciones
+- [ ] Integración con sistemas de transmisión en vivo
+- [ ] Aplicación móvil para jueces
+- [ ] Sistema de backup y recuperación de datos
+- [ ] Modo práctica para equipos
 
 ## 👥 Contribución
 
 Las contribuciones son bienvenidas. Por favor, seguir el siguiente proceso:
 1. Fork del repositorio
-2. Crear rama para nueva característica
-3. Commit y push de cambios
-4. Crear Pull Request
+2. Crear rama para nueva característica (git checkout -b feature/AmazingFeature)
+3. Commit de cambios (git commit -m 'Add some AmazingFeature')
+3. Push a la rama (git push origin feature/AmazingFeature)
+4. Abrir Pull Request
 
 ## 📄 Licencia
 

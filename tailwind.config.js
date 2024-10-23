@@ -48,7 +48,20 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+			  bronze: {
+				DEFAULT: '#CD7F32',
+				'50': '#F9EDE4',
+				'100': '#F3DBC9',
+				'200': '#E8B794',
+				'300': '#DC935F',
+				'400': '#CD7F32',
+				'500': '#A36628',
+				'600': '#7A4D1E',
+				'700': '#513314',
+				'800': '#291A0A',
+				'900': '#000000'
+			  }
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
