@@ -9,7 +9,6 @@ export default function ResultadosRetoPage({ params }) {
   const [resultados, setResultados] = useState([]);
   const [error, setError] = useState(null);
   const [puedeAvanzar, setPuedeAvanzar] = useState(false);
-  const [puedeAvanzarSemis, setPuedeAvanzarSemis] = useState(false);
 
   const calcularPuntuacionTotal = (intentos, tipoReto) => {
     if (!intentos || intentos.length === 0) return 0;
@@ -28,14 +27,6 @@ export default function ResultadosRetoPage({ params }) {
         const resReto = await axios.get(`/api/retos/${params.id}`);
         setReto(resReto.data);
         console.log('Reto obtenido:', resReto.data);
-
-        // Si el reto está en fase de cuartos, verificamos si puede avanzar a semis
-        if (resReto.data.fase === 'cuartos') {
-          const todosCalificados = resReto.data.emparejamientos.every(
-            emp => emp.ganador != null
-          );
-          setPuedeAvanzarSemis(todosCalificados);
-        }
 
         const resCalificaciones = await axios.get(`/api/calificaciones/resultados?retoId=${params.id}`);
         console.log('Calificaciones recibidas:', resCalificaciones.data);
@@ -72,12 +63,9 @@ export default function ResultadosRetoPage({ params }) {
   const avanzarFase = async () => {
     if (window.confirm('¿Estás seguro de que quieres avanzar a la siguiente fase? Esta acción no se puede deshacer.')) {
       try {
-        const endpoint = reto.fase === 'clasificatoria' 
-          ? `/api/retos/${params.id}/avanzarFase`
-          : `/api/retos/${params.id}/avanzarSemifinal`;
-
-        const response = await axios.post(endpoint);
+        const response = await axios.post(`/api/retos/${params.id}/avanzarFase`);
         alert('Se ha avanzado a la siguiente fase exitosamente.');
+        // Recargar la página para reflejar los cambios
         window.location.reload();
       } catch (error) {
         console.error('Error al avanzar de fase:', error);
@@ -128,8 +116,8 @@ export default function ResultadosRetoPage({ params }) {
         </table>
       )}
       
-      {puedeAvanzar && reto.fase === 'clasificatoria' && (
-        <button
+      {puedeAvanzar && (
+        <button 
           onClick={avanzarFase}
           className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
         >
@@ -137,20 +125,8 @@ export default function ResultadosRetoPage({ params }) {
         </button>
       )}
 
-      {puedeAvanzarSemis && reto.fase === 'cuartos' && (
-        <button
-          onClick={avanzarFase}
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
-        >
-          Avanzar a Semifinales
-        </button>
-      )}
-
       {reto.fase !== 'clasificatoria' && (
-        <Link 
-          href={`/retos/${reto._id}/brackets`} 
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-4 inline-block ml-2"
-        >
+        <Link href={`/retos/${reto._id}/brackets`} className="bg-blue-500 text-white px-4 py-2 rounded mt-4 inline-block">
           Ver Brackets de Eliminación
         </Link>
       )}
