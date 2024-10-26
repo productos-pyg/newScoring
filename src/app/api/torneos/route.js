@@ -1,3 +1,4 @@
+//src/app/api/torneos/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Torneo from "@/models/Torneo";

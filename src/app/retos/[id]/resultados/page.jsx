@@ -1,8 +1,10 @@
+//src/app/retos/[id]/resultados/page.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
+import { FaFire, FaArrowTrendUp, FaHelmetSafety} from "react-icons/fa6"
 
 export default function ResultadosRetoPage({ params }) {
   const [reto, setReto] = useState(null);
@@ -109,11 +111,19 @@ export default function ResultadosRetoPage({ params }) {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Resultados del Reto: {reto.nombre}</h1>
+      <div className='flex gap-4'>
+        <h1 className="text-2xl font-bold mb-4">Resultados: {reto.nombre}</h1>
+        {reto.tipo==="Exploradores" 
+          ? <FaHelmetSafety size={28} className='text-[#81b71f]'/> 
+          : reto.tipo==="FireFighting" 
+            ? <FaFire size={28} className='text-[#e94947]'/> 
+            : <FaArrowTrendUp size={28} className='text-[#1097d5]'/>
+        }
+      </div>
       {resultados.length === 0 ? (
         <p>No hay resultados disponibles para este reto.</p>
       ) : (
-        <table className="w-full border-collapse border border-gray-300">
+        <table className="w-full border-collapse border border-gray-300 shadow-md">
           <thead>
             <tr className="bg-gray-100">
               <th className="border border-gray-300 p-2">Posición</th>

@@ -1,3 +1,4 @@
+//src/app/torneos/[id]/editar/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";

@@ -1,3 +1,4 @@
+//src/app/api/retos/[id]/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Reto from "@/models/Reto";

@@ -1,3 +1,4 @@
+//src/app/api/calificiones/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Calificacion from '@/models/Calificacion';
