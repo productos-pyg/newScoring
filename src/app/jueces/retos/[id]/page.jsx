@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { FaFire, FaArrowTrendUp, FaHelmetSafety} from "react-icons/fa6"
+import { FaFire, FaArrowTrendUp, FaHelmetSafety } from "react-icons/fa6";
 
 export default function RetoEquiposPage({ params }) {
   const [reto, setReto] = useState(null);
@@ -26,28 +26,55 @@ export default function RetoEquiposPage({ params }) {
 
   if (!reto) return <div>Cargando...</div>;
 
-  console.log(reto)
   return (
     <div className="container mx-auto p-4">
       <div className='flex gap-4'>
-        <h1 className="text-2xl font-bold mb-4">Equipos Reto: <span className='text-[#1097d5]'>{reto.nombre}</span></h1>
+        <h1 className="text-2xl font-bold">
+          <span className='text-[#1097d5]'>{reto.nombre}</span>
+        </h1>
         {reto.tipo==="Exploradores" 
-            ? <FaHelmetSafety size={28} className='text-[#81b71f]'/> 
-            : reto.tipo==="FireFighting" 
-              ? <FaFire size={28} className='text-[#e94947]'/> 
-              : <FaArrowTrendUp size={28} className='text-[#1097d5]'/>
-          }
+          ? <FaHelmetSafety size={28} className='text-[#81b71f]'/> 
+          : reto.tipo==="FireFighting" 
+            ? <FaFire size={28} className='text-[#e94947]'/> 
+            : <FaArrowTrendUp size={28} className='text-[#1097d5]'/>
+        }
+      </div>
+
+      {/* Nuevo: Alerta de fase eliminatoria */}
+      {reto.fase !== 'clasificatoria' && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-blue-700">
+                <span className="font-bold">Fase Actual: </span>
+                {reto.fase === 'cuartos' ? 'Cuartos de Final' :
+                 reto.fase === 'semifinal' ? 'Semifinales' :
+                 'Final'}
+              </p>
+            </div>
+            <Link
+              href={`/retos/${reto._id}/resultados`}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              Ver y Calificar Llaves
+            </Link>
+          </div>
         </div>
-        <div className='border p-2 h-[75vh] overflow-y-auto shadow-lg rounded-md'>
-          <ul>
-            {equipos.map((equipo) => (
-              <li key={equipo._id} className="mb-2">
-                <Link href={`/jueces/calificar/${reto._id}/${equipo._id}`} className="text-[#1097d5] font-semibold hover:underline hover:text-[#81b71f]">
-                  {equipo.nombre}
-                </Link>
-              </li>
-            ))}
-          </ul>
+      )}
+
+      <div className='border p-2 h-[75vh] overflow-y-auto shadow-lg rounded-md'>
+        <ul>
+          {equipos.map((equipo) => (
+            <li key={equipo._id} className="mb-2">
+              <Link 
+                href={`/jueces/calificar/${reto._id}/${equipo._id}`} 
+                className="text-[#1097d5] font-semibold hover:underline hover:text-[#81b71f]"
+              >
+                {equipo.nombre}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
