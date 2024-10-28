@@ -1,7 +1,7 @@
 // src/app/api/auth/login/route.js
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { validateUser } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 export async function POST(req) {
   try {
@@ -15,27 +15,21 @@ export async function POST(req) {
       );
     }
 
+    // Crear sesión
     const session = {
       role: user.role,
       username: user.username
     };
 
-    // Modificamos las opciones de la cookie
-    const cookieOptions = {
+    // Establecer cookie
+    cookies().set('auth', JSON.stringify(session), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 horas
-      path: '/' // Añadimos esta línea
-    };
+      maxAge: 60 * 60 * 24 // 24 horas
+    });
 
-    // Crear la respuesta
-    const response = NextResponse.json(session);
-    
-    // Establecer la cookie en la respuesta
-    response.cookies.set('auth', JSON.stringify(session), cookieOptions);
-
-    return response;
+    return NextResponse.json(session);
   } catch (error) {
     console.error('Error en login:', error);
     return NextResponse.json(
