@@ -12,10 +12,19 @@ import axios from 'axios';
 const Navbar = () => {
   const router = useRouter();
 
-  const handleLogout = async () => {
+/*   const handleLogout = async () => {
     try {
       await axios.post('/api/auth/logout');
       router.push('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  }; */
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout');
+      window.location.href = '/login'; // Usar window.location para forzar recarga completa
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }

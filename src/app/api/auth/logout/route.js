@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 export async function POST() {
-  cookies().delete('auth');
-  return NextResponse.json({ message: 'Sesión cerrada' });
+  // Crear respuesta
+  const response = NextResponse.json({ message: 'Sesión cerrada' });
+
+  // Eliminar la cookie
+  response.cookies.delete('auth');
+
+  return response;
 }
