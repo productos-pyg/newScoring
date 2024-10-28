@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { FaFire, FaArrowTrendUp, FaHelmetSafety } from "react-icons/fa6";
+import RouteGuard from '@/components/RouteGuard';
 
 export default function RetoEquiposPage({ params }) {
   const [reto, setReto] = useState(null);
@@ -27,6 +28,7 @@ export default function RetoEquiposPage({ params }) {
   if (!reto) return <div>Cargando...</div>;
 
   return (
+    <RouteGuard allowedRoles={['admin', 'juez']}>
     <div className="container mx-auto p-4">
       <div className='flex gap-4'>
         <h1 className="text-2xl font-bold">
@@ -77,5 +79,6 @@ export default function RetoEquiposPage({ params }) {
         </ul>
       </div>
     </div>
+    </RouteGuard>
   );
 }

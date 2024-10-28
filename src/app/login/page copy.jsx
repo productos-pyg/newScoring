@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import useAuthStore from '@/store/authStore';
+import axios from 'axios';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +12,6 @@ export default function LoginPage() {
     password: ''
   });
   const [error, setError] = useState('');
-  const login = useAuthStore((state) => state.login);
 
   const handleChange = (e) => {
     setFormData({
@@ -25,25 +24,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    if (
-      formData.username === process.env.NEXT_PUBLIC_ADMIN_USERNAME && 
-      formData.password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD
-    ) {
-      login('admin');
-      router.push('/torneos');
-      return;
+    try {
+      const response = await axios.post('/api/auth/login', formData);
+      
+      if (response.data.role === 'admin') {
+        router.push('/torneos');
+      } else if (response.data.role === 'juez') {
+        router.push('/jueces');
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || 'Error al iniciar sesión');
     }
-
-    if (
-      formData.username === process.env.NEXT_PUBLIC_JUDGE_USERNAME && 
-      formData.password === process.env.NEXT_PUBLIC_JUDGE_PASSWORD
-    ) {
-      login('juez');
-      router.push('/jueces');
-      return;
-    }
-
-    setError('Credenciales inválidas');
   };
 
   return (
@@ -51,12 +42,12 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Iniciar Sesión
+            Iniciar Sesión en SW
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
             </div>
           )}

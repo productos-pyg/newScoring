@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import RouteGuard from '@/components/RouteGuard';
 
 export default function CalificarEnfrentamientoPage({ params }) {
   const router = useRouter();
@@ -372,6 +373,7 @@ useEffect(() => {
   
 
   return (
+    <RouteGuard allowedRoles={['admin', 'juez']}>
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Calificar Enfrentamiento</h1>
       <h2 className="text-xl mb-4">{reto.nombre} - {reto.fase}</h2>
@@ -575,5 +577,6 @@ Determinar Ganador
 </button>
 )}
 </div>
+</RouteGuard>
 );
 }

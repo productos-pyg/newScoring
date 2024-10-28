@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import RouteGuard from '@/components/RouteGuard';
 
 export default function CalificarEquipoPage({ params }) {
   const router = useRouter();
@@ -280,6 +281,7 @@ const marcarIntentoNoRealizado = async () => {
 if (!reto || !equipo || !calificacion) return <div>Cargando...</div>;
 
 return (
+  <RouteGuard allowedRoles={['admin', 'juez']}>
   <div className="container mx-auto p-4">
     <h1 className="text-2xl font-bold mb-4">Calificar equipo: {equipo.nombre}</h1>
     <h2 className="text-xl mb-2">Reto: {reto.nombre}</h2>
@@ -438,5 +440,6 @@ return (
       </div>
     )}
   </div>
+  </RouteGuard>
 );
 }

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
+import RouteGuard from '@/components/RouteGuard';
 
 export default function JuecesPage() {
   const [retos, setRetos] = useState([]);
@@ -21,6 +22,7 @@ export default function JuecesPage() {
   }, []);
 
   return (
+    <RouteGuard allowedRoles={['admin', 'juez']}>
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Panel de Jueces</h1>
       <h2 className="text-xl font-semibold mb-2">Retos disponibles:</h2>
@@ -36,5 +38,6 @@ export default function JuecesPage() {
         </ul>
       </div>
     </div>
+    </RouteGuard>
   );
 }

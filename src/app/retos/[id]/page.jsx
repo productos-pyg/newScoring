@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import RouteGuard from '@/components/RouteGuard';
 
 
 export default function RetoDetallePage({ params }) {
@@ -96,6 +97,7 @@ export default function RetoDetallePage({ params }) {
   console.log(reto)
 
   return (
+    <RouteGuard allowedRoles={['admin', 'juez']}>
     <div className="container mx-auto p-4">
       <div className='flex gap-4'>
         <h1 className="text-2xl font-bold mb-4">{reto.nombre}</h1>
@@ -312,5 +314,6 @@ export default function RetoDetallePage({ params }) {
         </button>
       </form> */}
     </div>
+    </RouteGuard>
   );
 }
