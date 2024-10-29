@@ -91,10 +91,6 @@ export default function PublicRetoDetail({ params }) {
     
     if (tipoReto === 'Exploradores') {
       return intentos.reduce((total, intento) => total + (intento.puntuacion || 0), 0);
-    } else if (tipoReto === 'LineFollowing') {
-      const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
-      puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
-      return puntuaciones.slice(0, 4).reduce((total, puntuacion) => total + puntuacion, 0);
     } else {
       const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
       puntuaciones.sort((a, b) => b - a);
@@ -282,89 +278,46 @@ export default function PublicRetoDetail({ params }) {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="space-y-4">
-                {/* Banner informativo */}
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
-                  <p className="text-sm text-blue-700">
-                    <span className="font-medium">Sistema de puntuación - {reto.tipo}:</span>
-                    {reto.tipo === 'LineFollowing' && (
-                      ' Cada equipo tiene 5 intentos. Se tomarán en cuenta los 4 mejores para la puntuación final.'
+              <table className="w-full border-collapse border border-gray-300 shadow-md rounded-lg">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border border-gray-300 p-2">Posición</th>
+                    <th className="border border-gray-300 p-2">Equipo</th>
+                    <th className="border border-gray-300 p-2">Puntuación Total</th>
+                    {reto.fase !== 'clasificatoria' && (
+                      <th className="border border-gray-300 p-2">Estado</th>
                     )}
-                    {reto.tipo === 'FireFighting' && (
-                      ' Cada equipo tiene 6 intentos. Se tomarán en cuenta los 5 mejores para la puntuación final.'
-                    )}
-                    {reto.tipo === 'Exploradores' && (
-                      ' Cada equipo tiene 3 intentos. Se sumarán todos los intentos para la puntuación final.'
-                    )}
-                  </p>
-                </div>
-
-                {/* Tabla de resultados */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300 shadow-md rounded-lg">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border border-gray-300 p-2">Posición</th>
-                        <th className="border border-gray-300 p-2">Equipo</th>
-                        <th className="border border-gray-300 p-2">Intentos</th>
-                        <th className="border border-gray-300 p-2">Puntuación Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultados
+                    .sort((a, b) => calcularPuntuacionTotal(b.intentos, reto.tipo) - 
+                                  calcularPuntuacionTotal(a.intentos, reto.tipo))
+                    .map((resultado, index) => (
+                      <tr 
+                        key={resultado._id}
+                        className={`${index < 8 ? 'bg-green-50' : ''} transition-colors duration-200`}
+                      >
+                        <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
+                        <td className="border border-gray-300 p-2">
+                          {resultado.equipo.nombre}
+                        </td>
+                        <td className="border border-gray-300 p-2 text-center">
+                          {calcularPuntuacionTotal(resultado.intentos, reto.tipo)}
+                        </td>
                         {reto.fase !== 'clasificatoria' && (
-                          <th className="border border-gray-300 p-2">Estado</th>
+                          <td className="border border-gray-300 p-2 text-center">
+                            <span className={`inline-block px-2 py-1 rounded-full text-sm 
+                              ${index < 8 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                            >
+                              {index < 8 ? 'Clasificado' : 'Eliminado'}
+                            </span>
+                          </td>
                         )}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {resultados
-                        .sort((a, b) => calcularPuntuacionTotal(b.intentos, reto.tipo) - 
-                                      calcularPuntuacionTotal(a.intentos, reto.tipo))
-                        .map((resultado, index) => (
-                          <tr 
-                            key={resultado._id}
-                            className={`${index < 8 ? 'bg-green-50' : ''} hover:bg-gray-50 transition-colors duration-150`}
-                          >
-                            <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
-                            <td className="border border-gray-300 p-2">
-                              {resultado.equipo.nombre}
-                            </td>
-                            <td className="border border-gray-300 p-2">
-                              <div className="space-y-1">
-                                {resultado.intentos.map((intento, i) => (
-                                  <div key={i} className="text-sm">
-                                    <span className={`inline-block w-20 ${
-                                      // Destacar los intentos que cuentan para la puntuación
-                                      (reto.tipo === 'LineFollowing' && i < 4) ||
-                                      (reto.tipo === 'FireFighting' && i < 5) ||
-                                      reto.tipo === 'Exploradores'
-                                        ? 'font-semibold text-blue-600'
-                                        : 'text-gray-500'
-                                    }`}>
-                                      Intento {intento.numero}:
-                                    </span>
-                                    <span className={intento.noRealizado ? 'text-red-500' : ''}>
-                                      {intento.noRealizado ? 'No realizado' : `${intento.puntuacion} pts`}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="border border-gray-300 p-2 text-center font-bold">
-                              {calcularPuntuacionTotal(resultado.intentos, reto.tipo)}
-                            </td>
-                            {reto.fase !== 'clasificatoria' && (
-                              <td className="border border-gray-300 p-2 text-center">
-                                <span className={`inline-block px-2 py-1 rounded-full text-sm 
-                                  ${index < 8 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-                                >
-                                  {index < 8 ? 'Clasificado' : 'Eliminado'}
-                                </span>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </>

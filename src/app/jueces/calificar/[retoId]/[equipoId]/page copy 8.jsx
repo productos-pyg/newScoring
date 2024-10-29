@@ -53,12 +53,10 @@ export default function CalificarEquipoPage({ params }) {
   }, [calificacionIniciada, tiempoRestante, reto?.tipo]);
 
   const iniciarCalificacion = () => {
-    const maxIntentos = reto.tipo === 'Exploradores' ? 3 : 
-    reto.tipo === 'LineFollowing' ? 5 : 6;
-    
+    const maxIntentos = reto.tipo === 'Exploradores' ? 3 : 6;
     if (calificacion.intentos.length >= maxIntentos) {
-    alert(`Ya se han completado todos los intentos permitidos (${maxIntentos})`);
-    return;
+      alert('Ya se han completado todos los intentos permitidos');
+      return;
     }
     
     setCalificacionIniciada(true);
@@ -174,15 +172,9 @@ const calcularPuntuacionTotal = (intentos, tipoReto) => {
   
   if (tipoReto === 'Exploradores') {
     return intentos.reduce((total, intento) => total + (intento.puntuacion || 0), 0);
-  } else if (tipoReto === 'LineFollowing') {
-    // Nueva lógica para Line Following
+  } else {
     const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
     puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
-    return puntuaciones.slice(0, 4).reduce((total, puntuacion) => total + puntuacion, 0);
-  } else {
-    // FireFighting mantiene la lógica original
-    const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
-    puntuaciones.sort((a, b) => b - a);
     return puntuaciones.slice(0, 5).reduce((total, puntuacion) => total + puntuacion, 0);
   }
 };
@@ -293,31 +285,6 @@ return (
   <div className="container mx-auto p-4">
     <h1 className="text-2xl font-bold mb-4">Calificar equipo: {equipo.nombre}</h1>
     <h2 className="text-xl mb-2">Reto: {reto.nombre}</h2>
-
-    {/*TOTALMENTE NUEVO */}
-    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
-      <p className="text-sm text-blue-700">
-        {reto.tipo === 'LineFollowing' && (
-          <>
-            <span className="font-medium">Intentos Line Following:</span>
-            {' '}Cada equipo tiene 5 intentos. Se tomarán en cuenta los 4 mejores para la puntuación final.
-          </>
-        )}
-        {reto.tipo === 'FireFighting' && (
-          <>
-            <span className="font-medium">Intentos Fire Fighting:</span>
-            {' '}Cada equipo tiene 6 intentos. Se tomarán en cuenta los 5 mejores para la puntuación final.
-          </>
-        )}
-        {reto.tipo === 'Exploradores' && (
-          <>
-            <span className="font-medium">Intentos Exploradores:</span>
-            {' '}Cada equipo tiene 3 intentos. Se sumarán todos los intentos para la puntuación final.
-          </>
-        )}
-      </p>
-    </div>
-    {/*TOTALMENTE NUEVO */}
     
     {!calificacionIniciada ? (
       <div>
@@ -345,22 +312,8 @@ return (
               {intento.noRealizado && ' (No realizado)'}
             </div>
           ))}
-          <div className="mt-2 space-y-1">
-            <p className="text-gray-600">
-              {reto.tipo === 'LineFollowing' && 'Se tomarán los 4 mejores intentos de 5 posibles'}
-              {reto.tipo === 'FireFighting' && 'Se tomarán los 5 mejores intentos de 6 posibles'}
-              {reto.tipo === 'Exploradores' && 'Se sumarán los 3 intentos'}
-            </p>
-            <p className="text-gray-600">
-              Intentos restantes: {
-                reto.tipo === 'LineFollowing' ? 5 - calificacion.intentos.length :
-                reto.tipo === 'Exploradores' ? 3 - calificacion.intentos.length :
-                6 - calificacion.intentos.length
-              }
-            </p>
-            <div className="font-bold">
-              Puntuación Total: {calcularPuntuacionTotal(calificacion.intentos, reto.tipo)}
-            </div>
+          <div className="font-bold mt-2">
+            Puntuación Total: {calcularPuntuacionTotal(calificacion.intentos, reto.tipo)}
           </div>
         </div>
       </div>

@@ -1,3 +1,5 @@
+//src/app/page.js
+
 import { Divide } from "lucide-react";
 import Image from "next/image";
 

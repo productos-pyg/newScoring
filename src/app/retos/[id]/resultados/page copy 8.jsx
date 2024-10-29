@@ -6,16 +6,13 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 import { FaFire, FaArrowTrendUp, FaHelmetSafety } from "react-icons/fa6";
-import useAuthStore from '@/store/authStore';
-/* import {useAuthStore} from "@/store/authStore" */
 
 export default function ResultadosRetoPage({ params }) {
-  const { role } = useAuthStore();
   const router = useRouter();
   const [reto, setReto] = useState(null);
   const [resultados, setResultados] = useState([]);
   const [error, setError] = useState(null);
- /*  const [userRole, setUserRole] = useState("admin"); */
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [puedeAvanzar, setPuedeAvanzar] = useState(false);
   const [puedeAvanzarSemis, setPuedeAvanzarSemis] = useState(false);
@@ -28,7 +25,7 @@ export default function ResultadosRetoPage({ params }) {
   });
 
   // Obtener el rol del usuario de la cookie al cargar
-/*   useEffect(() => {
+  useEffect(() => {
     const authCookie = document.cookie
       .split('; ')
       .find(row => row.startsWith('auth='));
@@ -37,7 +34,7 @@ export default function ResultadosRetoPage({ params }) {
       const authData = JSON.parse(decodeURIComponent(authCookie.split('=')[1]));
       setUserRole(authData.role);
     }
-  }, []); */
+  }, []);
 
   // Efecto principal para cargar datos
   useEffect(() => {
@@ -48,7 +45,6 @@ export default function ResultadosRetoPage({ params }) {
         setReto(resReto.data);
         
         const resCalificaciones = await axios.get(`/api/calificaciones/resultados?retoId=${params.id}`);
-        console.log(resCalificaciones)
         const calificacionesClasificatoria = resCalificaciones.data.filter(
           calificacion => !calificacion.emparejamiento && 
                          calificacion.intentos && 
@@ -72,9 +68,8 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
     // Un intento es válido si:
     // - Tiene puntuación definida (aunque sea 0)
     // - O está marcado explícitamente como no realizado
-    intento.puntuacion !== undefined /* || intento.noRealizado === true */
+    intento.puntuacion !== undefined || intento.noRealizado === true
   );
-  //console.log(intentosValidos)
   
   console.log(`Equipo ${cal.equipo.nombre}:`, {
     intentosRequeridos,
@@ -140,16 +135,9 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
 
   const calcularPuntuacionTotal = (intentos, tipoReto) => {
     if (!intentos || intentos.length === 0) return 0;
-    
     if (tipoReto === 'Exploradores') {
       return intentos.reduce((total, intento) => total + (intento.puntuacion || 0), 0);
-    } else if (tipoReto === 'LineFollowing') {
-      // Nueva lógica para Line Following
-      const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
-      puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
-      return puntuaciones.slice(0, 4).reduce((total, puntuacion) => total + puntuacion, 0);
     } else {
-      // FireFighting mantiene la lógica original
       const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
       puntuaciones.sort((a, b) => b - a);
       return puntuaciones.slice(0, 5).reduce((total, puntuacion) => total + puntuacion, 0);
@@ -269,10 +257,6 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
 
   if (error) return <div>Error: {error}</div>;
   if (!reto) return <div>Cargando...</div>;
-
-  //console.log(puedeAvanzar)
-  //console.log(reto.fase)
-  console.log(role)
 
   return (
     <div className="container mx-auto p-4">
@@ -396,12 +380,12 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
       {renderBrackets()}
 
       {/* Botones de Avance (Solo para admin) */}
-      {role === 'admin' && (
+      {userRole === 'admin' && (
         <div className="mt-6">
           {puedeAvanzar && reto.fase === 'clasificatoria' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Cuartos de Final
             </button>
@@ -410,7 +394,7 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
           {puedeAvanzarSemis && reto.fase === 'cuartos' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Semifinales
             </button>
@@ -419,29 +403,11 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
           {puedeAvanzarFinal && reto.fase === 'semifinal' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Fase Final
             </button>
           )}
-        </div>
-      )}
-
-      {/* Mensaje informativo para jueces */}
-      {role === 'juez' && puedeAvanzar && (
-        <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Se han cumplido las condiciones para avanzar de fase. Un administrador deberá realizar el avance.
-              </p>
-            </div>
-          </div>
         </div>
       )}
 

@@ -6,29 +6,17 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 import { FaFire, FaArrowTrendUp, FaHelmetSafety } from "react-icons/fa6";
-import useAuthStore from '@/store/authStore';
-/* import {useAuthStore} from "@/store/authStore" */
 
 export default function ResultadosRetoPage({ params }) {
-  const { role } = useAuthStore();
   const router = useRouter();
   const [reto, setReto] = useState(null);
   const [resultados, setResultados] = useState([]);
   const [error, setError] = useState(null);
- /*  const [userRole, setUserRole] = useState("admin"); */
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [puedeAvanzar, setPuedeAvanzar] = useState(false);
-  const [puedeAvanzarSemis, setPuedeAvanzarSemis] = useState(false);
-  const [puedeAvanzarFinal, setPuedeAvanzarFinal] = useState(false);
-  const [estadoVerificacion, setEstadoVerificacion] = useState({
-    tieneOchoOMasEquipos: false,
-    todosConIntentosCompletos: false,
-    numEquipos: 0,
-    detallesEquipos: []
-  });
 
   // Obtener el rol del usuario de la cookie al cargar
-/*   useEffect(() => {
+  useEffect(() => {
     const authCookie = document.cookie
       .split('; ')
       .find(row => row.startsWith('auth='));
@@ -37,86 +25,23 @@ export default function ResultadosRetoPage({ params }) {
       const authData = JSON.parse(decodeURIComponent(authCookie.split('=')[1]));
       setUserRole(authData.role);
     }
-  }, []); */
+  }, []);
 
-  // Efecto principal para cargar datos
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('Iniciando fetchData...');
         const resReto = await axios.get(`/api/retos/${params.id}`);
         setReto(resReto.data);
         
         const resCalificaciones = await axios.get(`/api/calificaciones/resultados?retoId=${params.id}`);
-        console.log(resCalificaciones)
         const calificacionesClasificatoria = resCalificaciones.data.filter(
           calificacion => !calificacion.emparejamiento && 
                          calificacion.intentos && 
                          calificacion.intentos.length > 1
         );
-
         setResultados(calificacionesClasificatoria);
-
-        // Verificación detallada para avanzar
-        const tieneOchoOMasEquipos = calificacionesClasificatoria.length >= 8;
-        const detallesEquipos = calificacionesClasificatoria.map(cal => ({
-          equipo: cal.equipo.nombre,
-          intentos: cal.intentos.length,
-          intentosValidos: cal.intentos.filter(i => i.puntuacion !== undefined || i.noRealizado === true).length
-        }));
-
-// En el useEffect donde hacemos la verificación
-const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
-  const intentosRequeridos = resReto.data.tipo === 'Exploradores' ? 3 : 6;
-  const intentosValidos = cal.intentos.filter(intento => 
-    // Un intento es válido si:
-    // - Tiene puntuación definida (aunque sea 0)
-    // - O está marcado explícitamente como no realizado
-    intento.puntuacion !== undefined /* || intento.noRealizado === true */
-  );
-  //console.log(intentosValidos)
-  
-  console.log(`Equipo ${cal.equipo.nombre}:`, {
-    intentosRequeridos,
-    intentosTotales: cal.intentos.length,
-    intentosValidos: intentosValidos.length,
-    intentos: cal.intentos.map(i => ({
-      puntuacion: i.puntuacion,
-      noRealizado: i.noRealizado
-    }))
-  });
-  
-  return intentosValidos.length >= intentosRequeridos;
-});
-
-        // Actualizar estado de verificación
-        setEstadoVerificacion({
-          tieneOchoOMasEquipos,
-          todosConIntentosCompletos,
-          numEquipos: calificacionesClasificatoria.length,
-          detallesEquipos
-        });
-
-        setPuedeAvanzar(tieneOchoOMasEquipos && todosConIntentosCompletos);
-        console.log('Estado de avance:', { tieneOchoOMasEquipos, todosConIntentosCompletos, puedeAvanzar });
-
-        // Verificaciones para otras fases
-        if (resReto.data.fase === 'semifinal') {
-          const todosCalificados = resReto.data.emparejamientos.every(
-            emp => emp.ganador != null
-          );
-          setPuedeAvanzarFinal(todosCalificados);
-        }
-
-        if (resReto.data.fase === 'cuartos') {
-          const todosCalificados = resReto.data.emparejamientos.every(
-            emp => emp.ganador != null
-          );
-          setPuedeAvanzarSemis(todosCalificados);
-        }
-
       } catch (error) {
-        console.error('Error al obtener resultados:', error);
+        console.error('Error al obtener los resultados:', error);
         setError(error.message || 'Ocurrió un error al cargar los resultados');
       } finally {
         setLoading(false);
@@ -140,22 +65,14 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
 
   const calcularPuntuacionTotal = (intentos, tipoReto) => {
     if (!intentos || intentos.length === 0) return 0;
-    
     if (tipoReto === 'Exploradores') {
       return intentos.reduce((total, intento) => total + (intento.puntuacion || 0), 0);
-    } else if (tipoReto === 'LineFollowing') {
-      // Nueva lógica para Line Following
-      const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
-      puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
-      return puntuaciones.slice(0, 4).reduce((total, puntuacion) => total + puntuacion, 0);
     } else {
-      // FireFighting mantiene la lógica original
       const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
       puntuaciones.sort((a, b) => b - a);
       return puntuaciones.slice(0, 5).reduce((total, puntuacion) => total + puntuacion, 0);
     }
   };
-
   const avanzarFase = async () => {
     if (userRole !== 'admin') return;
 
@@ -232,6 +149,7 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
                   <span className="font-semibold">{emparejamiento.equipo2.nombre}</span>
                 </div>
   
+                {/* Estado o Botón de Calificar */}
                 <div className="mt-4 flex justify-center">
                   {emparejamiento.ganador ? (
                     <div className="bg-green-100 border border-green-400 rounded p-3 w-full text-center">
@@ -270,10 +188,6 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
   if (error) return <div>Error: {error}</div>;
   if (!reto) return <div>Cargando...</div>;
 
-  //console.log(puedeAvanzar)
-  //console.log(reto.fase)
-  console.log(role)
-
   return (
     <div className="container mx-auto p-4">
       {/* Encabezado con información del reto */}
@@ -305,29 +219,6 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
         </div>
       </div>
 
-      {/* Panel de debug para fase clasificatoria */}
-      {reto.fase === 'clasificatoria' && userRole === 'admin' && (
-        <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 mb-6">
-          <h3 className="font-semibold text-blue-800 mb-2">Estado de Avance</h3>
-          <ul className="space-y-2">
-            <li className={`flex items-center ${estadoVerificacion.tieneOchoOMasEquipos ? 'text-green-600' : 'text-red-600'}`}>
-              • {estadoVerificacion.tieneOchoOMasEquipos ? '✓' : '✗'} Mínimo 8 equipos ({estadoVerificacion.numEquipos} actuales)
-            </li>
-            <li className={`flex items-center ${estadoVerificacion.todosConIntentosCompletos ? 'text-green-600' : 'text-red-600'}`}>
-              • {estadoVerificacion.todosConIntentosCompletos ? '✓' : '✗'} Todos los equipos han completado sus intentos
-            </li>
-            <li className="text-sm text-gray-600 mt-2">
-              Detalles por equipo:
-              {estadoVerificacion.detallesEquipos.map((detalle, index) => (
-                <div key={index} className="ml-4">
-                  {detalle.equipo}: {detalle.intentosValidos} intentos válidos de {detalle.intentos} totales
-                </div>
-              ))}
-            </li>
-          </ul>
-        </div>
-      )}
-
       {/* Tabla de Clasificación */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Tabla de Clasificación</h2>
@@ -342,7 +233,6 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 p-2">Posición</th>
                   <th className="border border-gray-300 p-2">Equipo</th>
-                  <th className="border border-gray-300 p-2">Intentos</th>
                   <th className="border border-gray-300 p-2">Puntuación Total</th>
                   {reto.fase !== 'clasificatoria' && (
                     <th className="border border-gray-300 p-2">Estado</th>
@@ -361,16 +251,6 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
                       <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
                       <td className="border border-gray-300 p-2">
                         {resultado.equipo.nombre}
-                      </td>
-                      <td className="border border-gray-300 p-2">
-                        <div className="space-y-1">
-                          {resultado.intentos.map((intento, i) => (
-                            <div key={i} className="text-sm">
-                              Intento {intento.numero}: {intento.puntuacion} 
-                              {intento.noRealizado && ' (No realizado)'}
-                            </div>
-                          ))}
-                        </div>
                       </td>
                       <td className="border border-gray-300 p-2 text-center">
                         {calcularPuntuacionTotal(resultado.intentos, reto.tipo)}
@@ -396,12 +276,12 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
       {renderBrackets()}
 
       {/* Botones de Avance (Solo para admin) */}
-      {role === 'admin' && (
+      {userRole === 'admin' && (
         <div className="mt-6">
           {puedeAvanzar && reto.fase === 'clasificatoria' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Cuartos de Final
             </button>
@@ -410,7 +290,7 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
           {puedeAvanzarSemis && reto.fase === 'cuartos' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Semifinales
             </button>
@@ -419,29 +299,11 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
           {puedeAvanzarFinal && reto.fase === 'semifinal' && (
             <button
               onClick={avanzarFase}
-              className="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600 transition-colors"
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-4"
             >
               Avanzar a Fase Final
             </button>
           )}
-        </div>
-      )}
-
-      {/* Mensaje informativo para jueces */}
-      {role === 'juez' && puedeAvanzar && (
-        <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Se han cumplido las condiciones para avanzar de fase. Un administrador deberá realizar el avance.
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
