@@ -19,37 +19,71 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Emparejamiento no encontrado' }, { status: 404 });
     }
 
-    // Crear calificación para el equipo
-    const calificacion = new Calificacion({
+    // Buscar o crear calificación
+    let calificacionExistente = await Calificacion.findOne({
       equipo: body.equipoId,
       reto: reto._id,
-      juez: body.juezId,
-      intentos: body.intentos
+      emparejamiento: body.emparejamientoId
     });
-    await calificacion.save();
 
-    // Actualizar el emparejamiento con la calificación
-    if (emparejamiento.equipo1.toString() === body.equipoId) {
-      emparejamiento.calificacionEquipo1 = calificacion._id;
-    } else if (emparejamiento.equipo2.toString() === body.equipoId) {
-      emparejamiento.calificacionEquipo2 = calificacion._id;
+    if (!calificacionExistente) {
+      calificacionExistente = new Calificacion({
+        equipo: body.equipoId,
+        reto: reto._id,
+        juez: body.juezId,
+        emparejamiento: body.emparejamientoId,
+        intentos: []
+      });
     }
 
-    // Verificar si ambos equipos tienen calificación para determinar ganador
+    // Validar número de intentos
+    if (calificacionExistente.intentos.length >= 2) {
+      return NextResponse.json(
+        { error: 'Ya se han realizado los dos intentos permitidos' },
+        { status: 400 }
+      );
+    }
+
+    // Añadir el nuevo intento
+    calificacionExistente.intentos.push(...body.intentos);
+    await calificacionExistente.save();
+
+    // Actualizar el emparejamiento con la referencia
+    if (emparejamiento.equipo1.toString() === body.equipoId) {
+      emparejamiento.calificacionEquipo1 = calificacionExistente._id;
+    } else {
+      emparejamiento.calificacionEquipo2 = calificacionExistente._id;
+    }
+
+    // Verificar empates y ganador
     if (emparejamiento.calificacionEquipo1 && emparejamiento.calificacionEquipo2) {
-      // Obtener ambas calificaciones
-      const calificacionEquipo1 = await Calificacion.findById(emparejamiento.calificacionEquipo1);
-      const calificacionEquipo2 = await Calificacion.findById(emparejamiento.calificacionEquipo2);
+      const cal1 = await Calificacion.findById(emparejamiento.calificacionEquipo1);
+      const cal2 = await Calificacion.findById(emparejamiento.calificacionEquipo2);
 
-      const puntajeEquipo1 = calificacionEquipo1.intentos[0]?.puntuacion || 0;
-      const puntajeEquipo2 = calificacionEquipo2.intentos[0]?.puntuacion || 0;
+      const ultimoPuntaje1 = cal1.intentos[cal1.intentos.length - 1].puntuacion;
+      const ultimoPuntaje2 = cal2.intentos[cal2.intentos.length - 1].puntuacion;
 
-      if (puntajeEquipo1 !== puntajeEquipo2) {
-        // Si hay un ganador claro, actualizarlo
-        emparejamiento.ganador = puntajeEquipo1 > puntajeEquipo2 ? 
-          emparejamiento.equipo1 : emparejamiento.equipo2;
+      // Primer intento y empate
+      if (cal1.intentos.length === 1 && cal2.intentos.length === 1 && ultimoPuntaje1 === ultimoPuntaje2) {
+        emparejamiento.empate = true;
+        emparejamiento.requiereSegundoIntento = true;
+        emparejamiento.ganador = null;
+      } 
+      // Segundo intento y empate
+      else if (cal1.intentos.length === 2 && cal2.intentos.length === 2 && ultimoPuntaje1 === ultimoPuntaje2) {
+        emparejamiento.empate = true;
+        emparejamiento.requiereDecisionManual = true;
+        emparejamiento.requiereSegundoIntento = false;
+        emparejamiento.ganador = null;
       }
-      // Si hay empate, no se asigna ganador todavía
+      // Hay un ganador
+      else if (cal1.intentos.length === cal2.intentos.length) {
+        emparejamiento.ganador = ultimoPuntaje1 > ultimoPuntaje2 ? 
+          emparejamiento.equipo1 : emparejamiento.equipo2;
+        emparejamiento.empate = false;
+        emparejamiento.requiereSegundoIntento = false;
+        emparejamiento.requiereDecisionManual = false;
+      }
     }
 
     await reto.save();
@@ -58,13 +92,13 @@ export async function POST(request, { params }) {
       message: 'Calificación guardada con éxito',
       emparejamiento
     });
+
   } catch (error) {
     console.error('Error al calificar equipo:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// Endpoint para obtener el estado actual del emparejamiento
 export async function GET(request, { params }) {
   await dbConnect();
   const { searchParams } = new URL(request.url);

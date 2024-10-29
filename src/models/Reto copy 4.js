@@ -4,17 +4,14 @@ const EmparejamientoSchema = new mongoose.Schema({
   fase: String,
   tipo: {
     type: String,
-    enum: ['final', 'tercerPuesto'],
+    enum: ['final', 'tercerPuesto'], // solo será requerido en fase final
     default: undefined
   },
   equipo1: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
   equipo2: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
   ganador: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipo' },
   calificacionEquipo1: { type: mongoose.Schema.Types.ObjectId, ref: 'Calificacion' },
-  calificacionEquipo2: { type: mongoose.Schema.Types.ObjectId, ref: 'Calificacion' },
-  empate: { type: Boolean, default: false },
-  requiereSegundoIntento: { type: Boolean, default: false },
-  requiereDecisionManual: { type: Boolean, default: false }
+  calificacionEquipo2: { type: mongoose.Schema.Types.ObjectId, ref: 'Calificacion' }
 });
 
 const RetoSchema = new mongoose.Schema(
