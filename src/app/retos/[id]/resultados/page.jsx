@@ -15,7 +15,7 @@ export default function ResultadosRetoPage({ params }) {
   const [reto, setReto] = useState(null);
   const [resultados, setResultados] = useState([]);
   const [error, setError] = useState(null);
- /*  const [userRole, setUserRole] = useState("admin"); */
+ /*  const [role, setrole] = useState("admin"); */
   const [loading, setLoading] = useState(true);
   const [puedeAvanzar, setPuedeAvanzar] = useState(false);
   const [puedeAvanzarSemis, setPuedeAvanzarSemis] = useState(false);
@@ -35,7 +35,7 @@ export default function ResultadosRetoPage({ params }) {
     
     if (authCookie) {
       const authData = JSON.parse(decodeURIComponent(authCookie.split('=')[1]));
-      setUserRole(authData.role);
+      setrole(authData.role);
     }
   }, []); */
 
@@ -157,7 +157,7 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
   };
 
   const avanzarFase = async () => {
-    if (userRole !== 'admin') return;
+    if (role !== 'admin') return;
 
     const faseActual = reto.fase;
     const mensaje = faseActual === 'clasificatoria' 
@@ -306,7 +306,7 @@ const todosConIntentosCompletos = calificacionesClasificatoria.every(cal => {
       </div>
 
       {/* Panel de debug para fase clasificatoria */}
-      {reto.fase === 'clasificatoria' && userRole === 'admin' && (
+      {reto.fase === 'clasificatoria' && role === 'admin' && (
         <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 mb-6">
           <h3 className="font-semibold text-blue-800 mb-2">Estado de Avance</h3>
           <ul className="space-y-2">
