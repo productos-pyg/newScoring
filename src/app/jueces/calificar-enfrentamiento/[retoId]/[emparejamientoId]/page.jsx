@@ -1,5 +1,4 @@
 // src/app/jueces/calificar-enfrentamiento/[retoId]/[emparejamientoId]/page.jsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,85 +10,68 @@ import RouteGuard from '@/components/RouteGuard';
 export default function CalificarEnfrentamientoPage({ params }) {
   const router = useRouter();
   const [reto, setReto] = useState(null);
-  const [emparejamiento, setEmparejamiento] = useState(null);
-  const [calificacionActual, setCalificacionActual] = useState({
-    equipo1: {
-      intentos: [],
-      intentoActual: 1,
-      tareas: {},
-      tiempoRestante: 0,
-      calificacionFinal: 0
-    },
-    equipo2: {
-      intentos: [],
-      intentoActual: 1,
-      tareas: {},
-      tiempoRestante: 0,
-      calificacionFinal: 0
-    }
+  const [emparejamientoActual, setEmparejamientoActual] = useState(null);
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState(null);
+  const [calificacion, setCalificacion] = useState({
+    intentos: [],
+    intentoActual: 1,
+    tareas: {},
+    tiempoRestante: 0,
+    calificacionFinal: 0
   });
-  const [equipoCalificando, setEquipoCalificando] = useState(null); // 'equipo1' o 'equipo2'
   const [calificacionIniciada, setCalificacionIniciada] = useState(false);
 
-  // src/app/jueces/calificar-enfrentamiento/[retoId]/[emparejamientoId]/page.jsx
-
-// Añadir al inicio del componente después de los estados
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const retoResponse = await axios.get(`/api/retos/${params.retoId}`);
-      setReto(retoResponse.data);
-      
-      const emparejamientoEncontrado = retoResponse.data.emparejamientos.find(
-        e => e._id === params.emparejamientoId
-      );
-      setEmparejamiento(emparejamientoEncontrado);
-
-      // Si ya hay un ganador, no permitir más calificaciones
-      if (emparejamientoEncontrado.ganador) {
-        router.push(`/retos/${params.retoId}/brackets`);
-        alert('Este enfrentamiento ya ha sido calificado.');
-        return;
-      }
-
-      // Inicializar tareas según el tipo de reto
-      const tareasIniciales = initializeTareasPorTipo(retoResponse.data.tipo);
-      setCalificacionActual(prev => ({
-        equipo1: { ...prev.equipo1, tareas: tareasIniciales },
-        equipo2: { ...prev.equipo2, tareas: tareasIniciales }
-      }));
-    } catch (error) {
-      console.error('Error al obtener datos:', error);
-    }
-  };
-
-  fetchData();
-}, [params.retoId, params.emparejamientoId, router]);
-
+  // Efecto para cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
       try {
         const retoResponse = await axios.get(`/api/retos/${params.retoId}`);
         setReto(retoResponse.data);
-        
-        const emparejamientoEncontrado = retoResponse.data.emparejamientos.find(
-          e => e._id === params.emparejamientoId
-        );
-        setEmparejamiento(emparejamientoEncontrado);
-
-        // Inicializar tareas según el tipo de reto
-        const tareasIniciales = initializeTareasPorTipo(retoResponse.data.tipo);
-        setCalificacionActual(prev => ({
-          equipo1: { ...prev.equipo1, tareas: tareasIniciales },
-          equipo2: { ...prev.equipo2, tareas: tareasIniciales }
-        }));
       } catch (error) {
         console.error('Error al obtener datos:', error);
+        alert('Error al cargar los datos del reto');
+      }
+    };
+    fetchData();
+  }, [params.retoId]);
+
+  // Efecto para verificar estado del emparejamiento
+  useEffect(() => {
+    const verificarEstado = async () => {
+      try {
+        const response = await axios.get(
+          `/api/retos/${params.retoId}/calificar-equipo?emparejamientoId=${params.emparejamientoId}`
+        );
+        setEmparejamientoActual(response.data);
+        
+        // Si el emparejamiento ya tiene ganador, redirigir a brackets
+        if (response.data.ganador) {
+          router.push(`/retos/${params.retoId}/brackets`);
+          return;
+        }
+      } catch (error) {
+        console.error('Error al verificar estado:', error);
       }
     };
 
-    fetchData();
-  }, [params.retoId, params.emparejamientoId]);
+    const interval = setInterval(verificarEstado, 5000); // Verificar cada 5 segundos
+    verificarEstado(); // Verificación inicial
+
+    return () => clearInterval(interval);
+  }, [params.retoId, params.emparejamientoId, router]);
+  // Efecto para el temporizador
+  useEffect(() => {
+    let intervalo;
+    if (calificacionIniciada && calificacion.tiempoRestante > 0) {
+      intervalo = setInterval(() => {
+        setCalificacion(prev => ({
+          ...prev,
+          tiempoRestante: prev.tiempoRestante - 1
+        }));
+      }, 1000);
+    }
+    return () => clearInterval(intervalo);
+  }, [calificacionIniciada, calificacion.tiempoRestante]);
 
   const initializeTareasPorTipo = (tipoReto) => {
     switch (tipoReto) {
@@ -127,24 +109,22 @@ useEffect(() => {
     }
   };
 
-  const iniciarCalificacionEquipo = (equipo) => {
-    setEquipoCalificando(equipo);
+  const iniciarCalificacion = () => {
+    if (!equipoSeleccionado) return;
+    
     setCalificacionIniciada(true);
-    const tiempoInicial = reto.tipo === 'Exploradores' ? 240 : 180;
-    setCalificacionActual(prev => ({
+    setCalificacion(prev => ({
       ...prev,
-      [equipo]: {
-        ...prev[equipo],
-        tiempoRestante: tiempoInicial
-      }
+      tiempoRestante: reto.tipo === 'Exploradores' ? 240 : 180,
+      tareas: initializeTareasPorTipo(reto.tipo)
     }));
   };
 
   const handleTareaChange = (tarea, subtarea = null) => {
-    if (!equipoCalificando) return;
+    if (!calificacionIniciada) return;
 
-    setCalificacionActual(prev => {
-      const nuevasTareas = { ...prev[equipoCalificando].tareas };
+    setCalificacion(prev => {
+      const nuevasTareas = { ...prev.tareas };
 
       if (reto.tipo === 'LineFollowing') {
         if (tarea === 'pelotasAdicionales') {
@@ -168,46 +148,10 @@ useEffect(() => {
 
       return {
         ...prev,
-        [equipoCalificando]: {
-          ...prev[equipoCalificando],
-          tareas: nuevasTareas
-        }
+        tareas: nuevasTareas
       };
     });
   };
-
-  // Continuará en el siguiente mensaje...
-  // Continuación de src/app/jueces/calificar-enfrentamiento/[retoId]/[emparejamientoId]/page.jsx
-
-  useEffect(() => {
-    let intervalo;
-    if (calificacionIniciada && equipoCalificando) {
-      intervalo = setInterval(() => {
-        setCalificacionActual(prev => {
-          const tiempoRestante = prev[equipoCalificando].tiempoRestante;
-          if (tiempoRestante <= 1) {
-            clearInterval(intervalo);
-            return {
-              ...prev,
-              [equipoCalificando]: {
-                ...prev[equipoCalificando],
-                tiempoRestante: 0
-              }
-            };
-          }
-          return {
-            ...prev,
-            [equipoCalificando]: {
-              ...prev[equipoCalificando],
-              tiempoRestante: tiempoRestante - 1
-            }
-          };
-        });
-      }, 1000);
-    }
-    return () => clearInterval(intervalo);
-  }, [calificacionIniciada, equipoCalificando]);
-
   const calcularPuntuacion = (equipoData) => {
     if (!reto) return 0;
 
@@ -270,313 +214,318 @@ useEffect(() => {
     }
   };
 
-  const finalizarIntentoEquipo = async () => {
-    if (!equipoCalificando) return;
+  const finalizarIntento = async () => {
+    if (!equipoSeleccionado || !calificacionIniciada) return;
 
-    const puntuacion = calcularPuntuacion(calificacionActual[equipoCalificando]);
+    const puntuacion = calcularPuntuacion(calificacion);
     
-    setCalificacionActual(prev => ({
-      ...prev,
-      [equipoCalificando]: {
-        ...prev[equipoCalificando],
-        calificacionFinal: puntuacion,
-        intentos: [...prev[equipoCalificando].intentos, {
-          numero: prev[equipoCalificando].intentoActual,
-          puntuacion,
-          detallesTareas: JSON.stringify(prev[equipoCalificando].tareas),
-          tiempoUtilizado: reto.tipo === 'Exploradores' ? 240 - prev[equipoCalificando].tiempoRestante : 180 - prev[equipoCalificando].tiempoRestante
-        }]
-      }
-    }));
-
-    setCalificacionIniciada(false);
-    setEquipoCalificando(null);
-  };
-
-  const determinarGanador = async () => {
-    const puntuacionEquipo1 = calificacionActual.equipo1.calificacionFinal;
-    const puntuacionEquipo2 = calificacionActual.equipo2.calificacionFinal;
-
-    if (puntuacionEquipo1 === puntuacionEquipo2 && 
-        calificacionActual.equipo1.intentoActual === 1) {
-      // Empate en primer intento, habilitar segundo intento
-      setCalificacionActual(prev => ({
-        equipo1: { ...prev.equipo1, intentoActual: 2 },
-        equipo2: { ...prev.equipo2, intentoActual: 2 }
-      }));
-      alert('Empate en el primer intento. Se habilitará un segundo intento para ambos equipos.');
-      return;
-    }
-
-    // Cambiamos const por let ya que necesitamos reasignarlo
-    let ganador = puntuacionEquipo1 > puntuacionEquipo2 ? 
-      emparejamiento.equipo1 : 
-      puntuacionEquipo2 > puntuacionEquipo1 ? 
-        emparejamiento.equipo2 : 
-        null;
-
-    if (!ganador && calificacionActual.equipo1.intentoActual === 2) {
-      // Empate en segundo intento, permitir decisión manual
-      if (window.confirm('Empate en segundo intento. ¿Debe ganar el equipo 1?')) {
-        ganador = emparejamiento.equipo1;
-      } else {
-        ganador = emparejamiento.equipo2;
-      }
-    }
-
     try {
-      await axios.post(`/api/retos/${params.retoId}/calificar-enfrentamiento`, {
+      await axios.post(`/api/retos/${params.retoId}/calificar-equipo`, {
         emparejamientoId: params.emparejamientoId,
-        intentosEquipo1: calificacionActual.equipo1.intentos,
-        intentosEquipo2: calificacionActual.equipo2.intentos,
-        ganador: ganador._id
+        equipoId: equipoSeleccionado.id,
+        juezId: "66fd725c056f60d8d3c282ec",
+        intentos: [{
+          numero: calificacion.intentoActual,
+          puntuacion,
+          detallesTareas: JSON.stringify(calificacion.tareas),
+          tiempoUtilizado: reto.tipo === 'Exploradores' ? 
+            240 - calificacion.tiempoRestante : 
+            180 - calificacion.tiempoRestante
+        }]
       });
 
-      alert('Enfrentamiento calificado exitosamente');
       router.push(`/retos/${params.retoId}/brackets`);
     } catch (error) {
-      console.error('Error al enviar la calificación:', error);
-      alert('Error al enviar la calificación: ' + error.response?.data?.error || error.message);
+      console.error('Error al enviar calificación:', error);
+      alert('Error al enviar la calificación: ' + (error.response?.data?.error || error.message));
     }
   };
-
-  if (!reto || !emparejamiento) return <div>Cargando...</div>;
-
-  if (emparejamiento.ganador) {
+  if (!reto || !emparejamientoActual) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <h1 className="text-2xl font-bold mb-4">Enfrentamiento Finalizado</h1>
-          <h2 className="text-xl mb-4">{reto.nombre} - {reto.fase}</h2>
-          
-          <div className="bg-green-100 border border-green-400 rounded p-4 mb-4">
-            <p className="text-lg font-semibold text-green-700">
-              Ganador: {emparejamiento.ganador.nombre}
-            </p>
-            <div className="mt-2">
-              <p className="font-semibold">Resultados:</p>
-              <p>{emparejamiento.equipo1.nombre}: {emparejamiento.calificacionEquipo1?.puntuacionTotal || 0} puntos</p>
-              <p>{emparejamiento.equipo2.nombre}: {emparejamiento.calificacionEquipo2?.puntuacionTotal || 0} puntos</p>
-            </div>
-          </div>
-  
-          <Link 
-            href={`/retos/${reto._id}/brackets`}
-            className="bg-blue-500 text-white px-4 py-2 rounded inline-block"
-          >
-            Volver a Brackets
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl font-semibold">Cargando...</div>
       </div>
     );
   }
-  
 
   return (
     <RouteGuard allowedRoles={['admin', 'juez']}>
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Calificar Enfrentamiento</h1>
-      <h2 className="text-xl mb-4">{reto.nombre} - {reto.fase}</h2>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-4">Calificar Enfrentamiento</h1>
+        <h2 className="text-xl mb-4">{reto.nombre} - {reto.fase}</h2>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Equipo 1 */}
-        <div className="border p-4 rounded">
-          <h3 className="font-bold">{emparejamiento.equipo1.nombre}</h3>
-          {!equipoCalificando && calificacionActual.equipo1.intentos.length < calificacionActual.equipo1.intentoActual && (
-            <button
-              onClick={() => iniciarCalificacionEquipo('equipo1')}
-              className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-            >
-              Iniciar Intento {calificacionActual.equipo1.intentoActual}
-            </button>
-          )}
-          {calificacionActual.equipo1.calificacionFinal > 0 && (
-            <p>Puntuación: {calificacionActual.equipo1.calificacionFinal}</p>
-          )}
-        </div>
-
-        {/* Equipo 2 */}
-        <div className="border p-4 rounded">
-          <h3 className="font-bold">{emparejamiento.equipo2.nombre}</h3>
-          {!equipoCalificando && calificacionActual.equipo2.intentos.length < calificacionActual.equipo2.intentoActual && (
-            <button
-              onClick={() => iniciarCalificacionEquipo('equipo2')}
-              className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-            >
-              Iniciar Intento {calificacionActual.equipo2.intentoActual}
-            </button>
-          )}
-          {calificacionActual.equipo2.calificacionFinal > 0 && (
-            <p>Puntuación: {calificacionActual.equipo2.calificacionFinal}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Formulario de calificación activo */}
-      {calificacionIniciada && equipoCalificando && (
-        <div className="mt-4 border p-4 rounded">
-          <h3 className="font-bold mb-2">
-            Calificando: {equipoCalificando === 'equipo1' ? 
-              emparejamiento.equipo1.nombre : 
-              emparejamiento.equipo2.nombre}
-          </h3>
-          <p className="text-xl mb-4">
-            Tiempo restante: {calificacionActual[equipoCalificando].tiempoRestante} segundos
-          </p>
-
-          {/* Formulario específico según tipo de reto */}
-          {/* Line Following */}
-          {reto.tipo === 'LineFollowing' && (
-            <div className="space-y-2">
-              {Object.entries(calificacionActual[equipoCalificando].tareas)
-                .filter(([key]) => key !== 'pelotasAdicionales')
-                .map(([tarea, completada]) => (
-                <div key={tarea}>
-                  <input
-                    type="checkbox"
-                    id={tarea}
-                    checked={completada}
-                    onChange={() => handleTareaChange(tarea)}
-                  />
-                  <label htmlFor={tarea} className="ml-2">
-                    {tarea.replace(/([A-Z])/g, ' $1').trim()}
-                  </label>
-                </div>
-              ))}
-              <div className="mt-4">
-                <label htmlFor="pelotasAdicionales" className="block">
-                  Pelotas adicionales:
-                </label>
-                <input
-                  type="number"
-                  id="pelotasAdicionales"
-                  value={calificacionActual[equipoCalificando].tareas.pelotasAdicionales || 0}
-                  onChange={(e) => handleTareaChange('pelotasAdicionales', e.target.value)}
-                  className="border p-2 rounded"
-                />
-              </div>
+        {/* Selección de equipo */}
+        {!equipoSeleccionado ? (
+          <>
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+              <p className="text-sm text-blue-700">
+                Seleccione el equipo que va a calificar. Cada equipo debe ser calificado
+                por un juez diferente. El sistema determinará automáticamente el ganador
+                cuando ambos equipos hayan sido calificados.
+              </p>
             </div>
-          )}
 
-          {/* Fire Fighting */}
-          {reto.tipo === 'FireFighting' && (
-            <div className="space-y-4">
-              {Object.entries(calificacionActual[equipoCalificando].tareas).map(([vela, estados]) => (
-                <div key={vela} className="border p-4 rounded">
-                  <h4 className="font-bold">{vela.toUpperCase()}</h4>
-                  <div>
-                    <input
-                      type="checkbox"
-                      id={`${vela}-sinPenalidad`}
-                      checked={estados.sinPenalidad}
-                      onChange={() => handleTareaChange(vela, 'sinPenalidad')}
-                    />
-                    <label htmlFor={`${vela}-sinPenalidad`} className="ml-2">
-                      Sin penalidad
-                    </label>
-                  </div>
-                  <div>
-                    <input
-                      type="checkbox"
-                      id={`${vela}-conPenalidad`}
-                      checked={estados.conPenalidad}
-                      onChange={() => handleTareaChange(vela, 'conPenalidad')}
-                    />
-                    <label htmlFor={`${vela}-conPenalidad`} className="ml-2">
-                      Con penalidad
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Exploradores */}
-          {reto.tipo === 'Exploradores' && (
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-bold">Tareas principales</h4>
-                {['inicioAS', 'SAI', 'IAR', 'RAFinal'].map((tarea) => (
-                  <div key={tarea}>
-                    <input
-                      type="checkbox"
-                      id={tarea}
-                      checked={calificacionActual[equipoCalificando].tareas[tarea]}
-                      onChange={() => handleTareaChange(tarea)}
-                    />
-                    <label htmlFor={tarea} className="ml-2">
-                      {tarea === 'inicioAS' ? 'Ir del inicio a la letra S' :
-                       tarea === 'SAI' ? 'Ir de la letra S a la letra I' :
-                       tarea === 'IAR' ? 'Ir de la letra I a la letra R' :
-                       'Ir de la letra R al punto final'}
-                    </label>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Equipo 1 */}
+              <div 
+                className={`border p-6 rounded-lg shadow-sm ${
+                  !emparejamientoActual.calificacionEquipo1 
+                    ? 'hover:bg-blue-50 cursor-pointer' 
+                    : 'bg-gray-50'
+                } transition-colors`}
+                onClick={() => !emparejamientoActual.calificacionEquipo1 && 
+                  setEquipoSeleccionado({
+                    id: emparejamientoActual.equipo1._id,
+                    nombre: emparejamientoActual.equipo1.nombre
+                  })}
+              >
+                <h3 className="text-lg font-bold mb-2">
+                  {emparejamientoActual.equipo1.nombre}
+                </h3>
+                {emparejamientoActual.calificacionEquipo1 ? (
+                  <span className="inline-flex items-center text-green-600">
+                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Calificado
+                  </span>
+                ) : (
+                  <span className="text-blue-600">Click para calificar</span>
+                )}
               </div>
 
-              <div>
-                <h4 className="font-bold">Penalizaciones</h4>
-                <div>
-                  <h5>Letra incorrecta</h5>
-                  {calificacionActual[equipoCalificando].tareas.penalizaciones.letraIncorrecta.map((_, index) => (
-                    <div key={`letra-${index}`}>
-                      <input
-                        type="checkbox"
-                        id={`letra-${index}`}
-                        checked={calificacionActual[equipoCalificando].tareas.penalizaciones.letraIncorrecta[index]}
-                        onChange={() => handleTareaChange('letraIncorrecta', index)}
-                      />
-                      <label htmlFor={`letra-${index}`} className="ml-2">
-                        Letra incorrecta {index + 1}
-                      </label>
+              {/* Equipo 2 */}
+              <div 
+                className={`border p-6 rounded-lg shadow-sm ${
+                  !emparejamientoActual.calificacionEquipo2 
+                    ? 'hover:bg-blue-50 cursor-pointer' 
+                    : 'bg-gray-50'
+                } transition-colors`}
+                onClick={() => !emparejamientoActual.calificacionEquipo2 && 
+                  setEquipoSeleccionado({
+                    id: emparejamientoActual.equipo2._id,
+                    nombre: emparejamientoActual.equipo2.nombre
+                  })}
+              >
+                <h3 className="text-lg font-bold mb-2">
+                  {emparejamientoActual.equipo2.nombre}
+                </h3>
+                {emparejamientoActual.calificacionEquipo2 ? (
+                  <span className="inline-flex items-center text-green-600">
+                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Calificado
+                  </span>
+                ) : (
+                  <span className="text-blue-600">Click para calificar</span>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          !calificacionIniciada ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+                <h3 className="font-bold text-lg mb-2">
+                  Calificando a: {equipoSeleccionado.nombre}
+                </h3>
+                <p className="text-sm text-blue-700">
+                  En enfrentamientos directos, cada equipo tiene un intento.
+                  En caso de empate, se habilitará un segundo intento.
+                </p>
+              </div>
+              <button
+                onClick={iniciarCalificacion}
+                className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
+              >
+                Iniciar Calificación
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Información de calificación en curso */}
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+                <h3 className="font-bold">
+                  Calificando a: {equipoSeleccionado.nombre}
+                </h3>
+                <p className="text-xl mb-2">
+                  Tiempo restante: {calificacion.tiempoRestante} segundos
+                </p>
+                {calificacion.intentoActual > 1 && (
+                  <p className="text-sm text-blue-700">
+                    Intento de desempate
+                  </p>
+                )}
+              </div>
+
+              {/* Formulario específico según tipo de reto */}
+              {reto.tipo === 'LineFollowing' && (
+                <div className="space-y-4">
+                  {Object.entries(calificacion.tareas)
+                    .filter(([key]) => key !== 'pelotasAdicionales')
+                    .map(([tarea, completada]) => (
+                      <div key={tarea} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={tarea}
+                          checked={completada}
+                          onChange={() => handleTareaChange(tarea)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor={tarea} className="text-gray-700">
+                          {tarea.replace(/([A-Z])/g, ' $1').trim()}
+                        </label>
+                      </div>
+                    ))}
+                  <div className="mt-4">
+                    <label htmlFor="pelotasAdicionales" className="block text-gray-700">
+                      Pelotas adicionales:
+                    </label>
+                    <input
+                      type="number"
+                      id="pelotasAdicionales"
+                      value={calificacion.tareas.pelotasAdicionales || 0}
+                      onChange={(e) => handleTareaChange('pelotasAdicionales', e.target.value)}
+                      min="0"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {reto.tipo === 'FireFighting' && (
+                <div className="space-y-6">
+                  {Object.entries(calificacion.tareas).map(([vela, estados]) => (
+                    <div key={vela} className="border p-4 rounded-lg bg-white shadow-sm">
+                      <h4 className="font-bold mb-2">{vela.toUpperCase()}</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`${vela}-sinPenalidad`}
+                            checked={estados.sinPenalidad}
+                            onChange={() => handleTareaChange(vela, 'sinPenalidad')}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor={`${vela}-sinPenalidad`}>
+                            Sin penalidad
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`${vela}-conPenalidad`}
+                            checked={estados.conPenalidad}
+                            onChange={() => handleTareaChange(vela, 'conPenalidad')}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor={`${vela}-conPenalidad`}>
+                            Con penalidad
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div>
-                  <h5>Obstáculos no evadidos</h5>
-                  {calificacionActual[equipoCalificando].tareas.penalizaciones.obstaculos.map((_, index) => (
-                    <div key={`obstaculo-${index}`}>
+              )}
+{reto.tipo === 'Exploradores' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-bold mb-3">Tareas principales</h4>
+                    <div className="space-y-2">
+                      {[
+                        { key: 'inicioAS', label: 'Ir del inicio a la letra S' },
+                        { key: 'SAI', label: 'Ir de la letra S a la letra I' },
+                        { key: 'IAR', label: 'Ir de la letra I a la letra R' },
+                        { key: 'RAFinal', label: 'Ir de la letra R al punto final' }
+                      ].map(({ key, label }) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={key}
+                            checked={calificacion.tareas[key]}
+                            onChange={() => handleTareaChange(key)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor={key}>{label}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-<input
-  type="checkbox"
-  id={`obstaculo-${index}`}
-  checked={calificacionActual[equipoCalificando].tareas.penalizaciones.obstaculos[index]}
-  onChange={() => handleTareaChange('obstaculos', index)}
-/>
-<label htmlFor={`obstaculo-${index}`} className="ml-2">
-  Obstáculo {index + 1}
-</label>
-</div>
-))}
-</div>
-</div>
-</div>
-)}
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-bold mb-3">Penalizaciones</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <h5 className="font-medium mb-2">Letra incorrecta</h5>
+                        {calificacion.tareas.penalizaciones.letraIncorrecta.map((_, index) => (
+                          <div key={`letra-${index}`} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`letra-${index}`}
+                              checked={calificacion.tareas.penalizaciones.letraIncorrecta[index]}
+                              onChange={() => handleTareaChange('letraIncorrecta', index)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor={`letra-${index}`}>
+                              Letra incorrecta {index + 1}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
 
-<p className="text-xl mt-4">
-Puntuación actual: {calcularPuntuacion(calificacionActual[equipoCalificando])}
-</p>
+                      <div>
+                        <h5 className="font-medium mb-2">Obstáculos no evadidos</h5>
+                        {calificacion.tareas.penalizaciones.obstaculos.map((_, index) => (
+                          <div key={`obstaculo-${index}`} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`obstaculo-${index}`}
+                              checked={calificacion.tareas.penalizaciones.obstaculos[index]}
+                              onChange={() => handleTareaChange('obstaculos', index)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor={`obstaculo-${index}`}>
+                              Obstáculo {index + 1}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-<button
-onClick={finalizarIntentoEquipo}
-className="bg-green-500 text-white px-4 py-2 rounded mt-4"
->
-Finalizar Intento
-</button>
-</div>
-)}
+              {/* Puntuación y botón de finalizar */}
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xl font-bold">
+                    Puntuación: {calcularPuntuacion(calificacion)}
+                  </p>
+                </div>
 
-{/* Botón para determinar ganador */}
-{calificacionActual.equipo1.calificacionFinal > 0 && 
-calificacionActual.equipo2.calificacionFinal > 0 && (
-<button
-onClick={determinarGanador}
-className="bg-blue-500 text-white px-4 py-2 rounded mt-4 block w-full"
->
-Determinar Ganador
-</button>
-)}
-</div>
-</RouteGuard>
-);
+                <button
+                  onClick={finalizarIntento}
+                  className="w-full bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors"
+                >
+                  Finalizar Calificación
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Botón de volver */}
+        <div className="mt-6">
+          <Link 
+            href={`/retos/${reto._id}/brackets`}
+            className="inline-block bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+          >
+            Volver a brackets
+          </Link>
+        </div>
+      </div>
+    </RouteGuard>
+  );
 }
