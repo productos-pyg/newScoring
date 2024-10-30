@@ -1,8 +1,10 @@
+//src/app/jueces/calificar/[retoId]/[equipoId]/page.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import RouteGuard from '@/components/RouteGuard';
 
 export default function CalificarEquipoPage({ params }) {
   const router = useRouter();
@@ -51,10 +53,12 @@ export default function CalificarEquipoPage({ params }) {
   }, [calificacionIniciada, tiempoRestante, reto?.tipo]);
 
   const iniciarCalificacion = () => {
-    const maxIntentos = reto.tipo === 'Exploradores' ? 3 : 6;
+    const maxIntentos = reto.tipo === 'Exploradores' ? 3 : 
+    reto.tipo === 'LineFollowing' ? 5 : 6;
+    
     if (calificacion.intentos.length >= maxIntentos) {
-      alert('Ya se han completado todos los intentos permitidos');
-      return;
+    alert(`Ya se han completado todos los intentos permitidos (${maxIntentos})`);
+    return;
     }
     
     setCalificacionIniciada(true);
@@ -91,8 +95,6 @@ export default function CalificarEquipoPage({ params }) {
       });
     }
   };
-
-// ... Continuación de la Parte 1
 
 const handleTareaChange = (tarea, subtarea = null) => {
   if (reto.tipo === 'LineFollowing') {
@@ -167,6 +169,65 @@ const calcularPuntuacion = () => {
   return 0;
 };
 
+const calcularPuntuacionTotal = (intentos, tipoReto) => {
+  if (!intentos || intentos.length === 0) return 0;
+  
+  if (tipoReto === 'Exploradores') {
+    return intentos.reduce((total, intento) => total + (intento.puntuacion || 0), 0);
+  } else if (tipoReto === 'LineFollowing') {
+    // Nueva lógica para Line Following
+    const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
+    puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
+    return puntuaciones.slice(0, 4).reduce((total, puntuacion) => total + puntuacion, 0);
+  } else {
+    // FireFighting mantiene la lógica original
+    const puntuaciones = intentos.map(intento => intento.puntuacion || 0);
+    puntuaciones.sort((a, b) => b - a);
+    return puntuaciones.slice(0, 5).reduce((total, puntuacion) => total + puntuacion, 0);
+  }
+};
+
+/* const calcularPuntuacionTotal = (intentos, tipoReto) => {
+  if (tipoReto === 'Exploradores') {
+    // Para Exploradores, sumamos los 3 intentos
+    return intentos.reduce((total, intento) => total + intento.puntuacion, 0);
+  } else {
+    // Para FireFighting y LineFollowing, tomamos los 5 más altos de 6
+    const puntuaciones = intentos.map(intento => intento.puntuacion);
+    puntuaciones.sort((a, b) => b - a); // Ordenamos de mayor a menor
+    return puntuaciones.slice(0, 5).reduce((total, puntuacion) => total + puntuacion, 0);
+  }
+}; */
+
+/* const enviarCalificacion = async () => {
+  const puntuacion = calcularPuntuacion();
+  const nuevoIntento = {
+    numero: calificacion.intentos.length + 1,
+    puntuacion: puntuacion,
+    detallesTareas: JSON.stringify(tareas),
+    tiempoUtilizado: reto.tipo === 'Exploradores' ? 240 - tiempoRestante : 180 - tiempoRestante,
+    pelotasAdicionales: reto.tipo === 'LineFollowing' ? pelotasAdicionales : 0
+  };
+  
+  try {
+    const nuevosIntentos = [...calificacion.intentos, nuevoIntento];
+    const nuevaPuntuacionTotal = calcularPuntuacionTotal(nuevosIntentos, reto.tipo);
+
+    const response = await axios.post('/api/calificaciones', {
+      equipo: params.equipoId,
+      reto: params.retoId,
+      juez: '66fd725c056f60d8d3c282ec', // Asegúrate de que este ID de juez exista en tu base de datos
+      intentos: nuevosIntentos,
+      puntuacionTotal: nuevaPuntuacionTotal
+    });
+    setCalificacion(response.data);
+    setCalificacionIniciada(false);
+    alert('Calificación enviada con éxito');
+  } catch (error) {
+    console.error('Error al enviar la calificación:', error);
+    alert('Error al enviar la calificación: ' + error.response?.data?.error || error.message);
+  }
+}; */
 const enviarCalificacion = async () => {
   const puntuacion = calcularPuntuacion();
   const nuevoIntento = {
@@ -178,32 +239,44 @@ const enviarCalificacion = async () => {
   };
   
   try {
+    const nuevosIntentos = [...calificacion.intentos, nuevoIntento];
+    const nuevaPuntuacionTotal = calcularPuntuacionTotal(nuevosIntentos, reto.tipo);
+
     const response = await axios.post('/api/calificaciones', {
       equipo: params.equipoId,
       reto: params.retoId,
       juez: '66fd725c056f60d8d3c282ec', // Asegúrate de que este ID de juez exista en tu base de datos
-      ...nuevoIntento
+      intentos: nuevosIntentos,
+      puntuacionTotal: nuevaPuntuacionTotal
     });
     setCalificacion(response.data);
     setCalificacionIniciada(false);
     alert('Calificación enviada con éxito');
   } catch (error) {
     console.error('Error al enviar la calificación:', error);
-    alert('Error al enviar la calificación: ' + error.response?.data?.error || error.message);
+    alert('Error al enviar la calificación: ' + (error.response?.data?.error || error.message));
   }
 };
+// ... Continuación de la Parte 2
 
 const marcarIntentoNoRealizado = async () => {
   try {
-    const response = await axios.post('/api/calificaciones', {
-      equipo: params.equipoId,
-      reto: params.retoId,
-      juez: '66fd725c056f60d8d3c282ec',
+    const nuevoIntento = {
       numero: calificacion.intentos.length + 1,
       puntuacion: 0,
       detallesTareas: '',
       tiempoUtilizado: 0,
       noRealizado: true
+    };
+    const nuevosIntentos = [...calificacion.intentos, nuevoIntento];
+    const nuevaPuntuacionTotal = calcularPuntuacionTotal(nuevosIntentos, reto.tipo);
+
+    const response = await axios.post('/api/calificaciones', {
+      equipo: params.equipoId,
+      reto: params.retoId,
+      juez: '66fd725c056f60d8d3c282ec',
+      intentos: nuevosIntentos,
+      puntuacionTotal: nuevaPuntuacionTotal
     });
     setCalificacion(response.data);
     alert('Intento marcado como no realizado');
@@ -216,9 +289,35 @@ const marcarIntentoNoRealizado = async () => {
 if (!reto || !equipo || !calificacion) return <div>Cargando...</div>;
 
 return (
+  <RouteGuard allowedRoles={['admin', 'juez']}>
   <div className="container mx-auto p-4">
     <h1 className="text-2xl font-bold mb-4">Calificar equipo: {equipo.nombre}</h1>
     <h2 className="text-xl mb-2">Reto: {reto.nombre}</h2>
+
+    {/*TOTALMENTE NUEVO */}
+    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+      <p className="text-sm text-blue-700">
+        {reto.tipo === 'LineFollowing' && (
+          <>
+            <span className="font-medium">Intentos Line Following:</span>
+            {' '}Cada equipo tiene 5 intentos. Se tomarán en cuenta los 4 mejores para la puntuación final.
+          </>
+        )}
+        {reto.tipo === 'FireFighting' && (
+          <>
+            <span className="font-medium">Intentos Fire Fighting:</span>
+            {' '}Cada equipo tiene 6 intentos. Se tomarán en cuenta los 5 mejores para la puntuación final.
+          </>
+        )}
+        {reto.tipo === 'Exploradores' && (
+          <>
+            <span className="font-medium">Intentos Exploradores:</span>
+            {' '}Cada equipo tiene 3 intentos. Se sumarán todos los intentos para la puntuación final.
+          </>
+        )}
+      </p>
+    </div>
+    {/*TOTALMENTE NUEVO */}
     
     {!calificacionIniciada ? (
       <div>
@@ -246,8 +345,22 @@ return (
               {intento.noRealizado && ' (No realizado)'}
             </div>
           ))}
-          <div className="font-bold mt-2">
-            Puntuación Total: {calificacion.puntuacionTotal}
+          <div className="mt-2 space-y-1">
+            <p className="text-gray-600">
+              {reto.tipo === 'LineFollowing' && 'Se tomarán los 4 mejores intentos de 5 posibles'}
+              {reto.tipo === 'FireFighting' && 'Se tomarán los 5 mejores intentos de 6 posibles'}
+              {reto.tipo === 'Exploradores' && 'Se sumarán los 3 intentos'}
+            </p>
+            <p className="text-gray-600">
+              Intentos restantes: {
+                reto.tipo === 'LineFollowing' ? 5 - calificacion.intentos.length :
+                reto.tipo === 'Exploradores' ? 3 - calificacion.intentos.length :
+                6 - calificacion.intentos.length
+              }
+            </p>
+            <div className="font-bold">
+              Puntuación Total: {calcularPuntuacionTotal(calificacion.intentos, reto.tipo)}
+            </div>
           </div>
         </div>
       </div>
@@ -374,5 +487,6 @@ return (
       </div>
     )}
   </div>
+  </RouteGuard>
 );
 }

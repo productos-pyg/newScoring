@@ -94,7 +94,7 @@ export default function RetoDetallePage({ params }) {
   };
 
   if (!reto) return <div>Cargando...</div>;
-  console.log(reto)
+  //console.log(reto)
 
   return (
     <RouteGuard allowedRoles={['admin', 'juez']}>
@@ -108,16 +108,18 @@ export default function RetoDetallePage({ params }) {
             : <FaArrowTrendUp size={28} className='text-[#1097d5]'/>
         }
       </div>
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <p className="mb-2"><span className="font-bold">Descripción:</span> {reto.descripcion}</p>
+      <div className="bg-white shadow-md rounded px-8 pt-2 pb-2 mb-4">
+        <p className="mb-2"><span className="font-bold">Descripción:</span> <span className='text-xs'>{reto.descripcion}</span></p>
         <div className='flex justify-between'>
           <p className="mb-2"><span className="font-bold">Tipo de reto:</span> {reto.tipo}</p>
           {/* <p className="mb-2"><span className="font-bold">Puntuación máxima:</span> {reto.puntuacionMaxima}</p> */}
           <p className="mb-2"><span className="font-bold">Categoría:</span> {reto.categoriaEdad}</p>
         </div>
-        <p className="mb-2"><span className="font-bold">Duración máxima:</span> {reto.duracionMaxima} segundos</p>
-        <p className="mb-2"><span className="font-bold">Participantes por equipo:</span> Mínimo {reto.participantesPorEquipo.min}, Máximo {reto.participantesPorEquipo.max}</p>
-        {/* <p className="mb-2"><span className="font-bold">Torneo:</span> <Link href={`/torneos/${reto.torneo._id}`} className="text-blue-500">{reto.torneo.nombre}</Link></p> */}
+        <div className='flex justify-between'>
+          <p className="mb-2"><span className="font-bold">Duración máxima:</span> {reto.duracionMaxima} segundos</p>
+          <p className="mb-2"><span className="font-bold">Participantes por equipo:</span> Mínimo {reto.participantesPorEquipo.min}, Máximo {reto.participantesPorEquipo.max}</p>
+          {/* <p className="mb-2"><span className="font-bold">Torneo:</span> <Link href={`/torneos/${reto.torneo._id}`} className="text-blue-500">{reto.torneo.nombre}</Link></p> */}
+        </div>
       </div>
       
       <div className="mt-4 space-x-2">
@@ -222,9 +224,8 @@ export default function RetoDetallePage({ params }) {
 
 
 
-
-      <h2 className="text-xl font-bold mt-8 mb-4">Equipos</h2>
-      <ul>
+      <h2 className="text-xl font-bold mt-6 mb-4 text-[#211551]">Equipos:</h2>
+      <ul className='border shadow-md rounded-md p-2 h-[40vh] overflow-y-auto'>
         {equipos.map((equipo) => (
           <li key={equipo._id} className="mb-2">
             <Link href={`/equipos/${equipo._id}`} className="text-lg font-semibold text-[#1097d5]">

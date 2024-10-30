@@ -400,13 +400,13 @@ export default function PublicRetoDetail({ params }) {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-lg p-4 mb-4">
         <div className="flex items-center gap-4 mb-4">
           <h1 className="text-3xl font-bold">{reto.nombre}</h1>
           {getRetoIcon(reto.tipo)}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
           <div>
             <p className="text-gray-600">
               <span className="font-semibold">Tipo:</span> {reto.tipo}

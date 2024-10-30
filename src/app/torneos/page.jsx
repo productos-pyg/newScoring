@@ -23,14 +23,14 @@ export default function TorneosPage() {
         <h1 className="text-2xl font-bold mb-4">Torneos</h1>
         <Link
           href="/torneos/crear"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          className="bg-[#1097d5] text-white px-4 py-2 rounded"
         >
           Crear Torneo
         </Link>
         <ul className="mt-4">
           {torneos.map((torneo) => (
-            <li key={torneo._id} className="border p-4 mb-2 rounded shadow-md">
-              <h2 className="text-xl">{torneo.nombre}</h2>
+            <li key={torneo._id} className="border p-4 mb-2 rounded-md shadow-md">
+              <h2 className="text-xl font-semibold text-[#211551]">{torneo.nombre}</h2>
               <div className="flex justify-between">
                 <p>
                   Fecha de inicio:{" "}
@@ -42,12 +42,12 @@ export default function TorneosPage() {
               </div>
               <div className="flex justify-between">
                 <p>Estado: {torneo.estado}</p>
-                <Link href={`/torneos/${torneo._id}`} className="bg-[#1097d5] px-1 text-white rounded">
+                <Link href={`/torneos/${torneo._id}`} className="bg-[#81b71f] px-1 text-white rounded hover:shadow-lg">
                   Ver detalles
                 </Link>
               </div>
             </li>
-          ))}
+          )).reverse()}
         </ul>
       </div>
     </RouteGuard>

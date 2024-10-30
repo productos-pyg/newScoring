@@ -18,7 +18,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Emparejamiento no encontrado' }, { status: 404 });
     }
 
-    // Solo permitir decisión manual si hay empate persistente
+    // Solo permitir decisión si hay empate persistente
     if (!emparejamiento.requiereDecisionManual) {
       return NextResponse.json(
         { error: 'Este emparejamiento no requiere decisión manual' }, 
@@ -27,9 +27,9 @@ export async function POST(request, { params }) {
     }
 
     emparejamiento.ganador = body.ganadorId;
-    emparejamiento.decisionManual = true;
     emparejamiento.empate = false;
     emparejamiento.requiereDecisionManual = false;
+    emparejamiento.decisionManual = true;
 
     await reto.save();
 

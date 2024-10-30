@@ -32,6 +32,7 @@ export default function RetoEquiposPage({ params }) {
     <div className="container mx-auto p-4">
       <div className='flex gap-4'>
         <h1 className="text-2xl font-bold">
+          <span className='text-[#211551]'>Equipos: </span>
           <span className='text-[#1097d5]'>{reto.nombre}</span>
         </h1>
         {reto.tipo==="Exploradores" 
@@ -67,10 +68,10 @@ export default function RetoEquiposPage({ params }) {
       <div className='border p-2 h-[75vh] overflow-y-auto shadow-lg rounded-md'>
         <ul>
           {equipos.map((equipo) => (
-            <li key={equipo._id} className="mb-2">
+            <li key={equipo._id} className="mb-2 border-b-2">
               <Link 
                 href={`/jueces/calificar/${reto._id}/${equipo._id}`} 
-                className="text-[#1097d5] font-semibold hover:underline hover:text-[#81b71f]"
+                className="text-[#1097d5] text-lg font-semibold hover:underline hover:text-[#81b71f]"
               >
                 {equipo.nombre}
               </Link>

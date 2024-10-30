@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import RouteGuard from '@/components/RouteGuard';
+import Link from 'next/link';
 
 export default function CalificarEquipoPage({ params }) {
   const router = useRouter();
@@ -15,6 +16,20 @@ export default function CalificarEquipoPage({ params }) {
   const [calificacionIniciada, setCalificacionIniciada] = useState(false);
   const [tareas, setTareas] = useState({});
   const [pelotasAdicionales, setPelotasAdicionales] = useState(0);
+
+  // Añadir después de la inicialización de estados
+const verificarTareasCompletas = () => {
+  if (reto.tipo === 'Exploradores') {
+    return ['inicioAS', 'SAI', 'IAR', 'RAFinal'].every(
+      task => tareas[task]
+    );
+  } else if (reto.tipo === 'FireFighting') {
+    return Object.values(tareas).every(
+      vela => (vela.sinPenalidad && !vela.conPenalidad) || (!vela.sinPenalidad && vela.conPenalidad)
+    );
+  }
+  return true;
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,11 +115,19 @@ const handleTareaChange = (tarea, subtarea = null) => {
   if (reto.tipo === 'LineFollowing') {
     setTareas(prevTareas => ({ ...prevTareas, [tarea]: !prevTareas[tarea] }));
   } else if (reto.tipo === 'FireFighting') {
-    setTareas(prevTareas => ({
-      ...prevTareas,
-      [tarea]: { ...prevTareas[tarea], [subtarea]: !prevTareas[tarea][subtarea] }
-    }));
-  } else if (reto.tipo === 'Exploradores') {
+    const nuevasTareas = { ...tareas };
+    // Si intentamos marcar un checkbox y el otro ya está marcado, desmarcamos el otro
+    if (subtarea === 'sinPenalidad' && nuevasTareas[tarea].conPenalidad) {
+      nuevasTareas[tarea].conPenalidad = false;
+    } else if (subtarea === 'conPenalidad' && nuevasTareas[tarea].sinPenalidad) {
+      nuevasTareas[tarea].sinPenalidad = false;
+    }
+    
+    // Marcamos o desmarcamos el checkbox actual
+    nuevasTareas[tarea][subtarea] = !nuevasTareas[tarea][subtarea];
+    
+    setTareas(nuevasTareas);
+  }else if (reto.tipo === 'Exploradores') {
     if (subtarea === null) {
       setTareas(prevTareas => ({ ...prevTareas, [tarea]: !prevTareas[tarea] }));
     } else {
@@ -135,6 +158,7 @@ const calcularPuntuacion = () => {
     return puntuacion;
   } else if (reto.tipo === 'FireFighting') {
     let puntuacion = 0;
+    
     if (tareas.vela1.sinPenalidad) puntuacion += 100;
     else if (tareas.vela1.conPenalidad) puntuacion += 50;
     if (tareas.vela2.sinPenalidad) puntuacion += 200;
@@ -143,10 +167,16 @@ const calcularPuntuacion = () => {
     else if (tareas.vela3.conPenalidad) puntuacion += 150;
     if (tareas.vela4.sinPenalidad) puntuacion += 400;
     else if (tareas.vela4.conPenalidad) puntuacion += 200;
-    puntuacion += tiempoRestante;
+  
+    // Solo sumar tiempo si todas las velas tienen un check válido
+    if (verificarTareasCompletas()) {
+      puntuacion += tiempoRestante;
+    }
+  
     return puntuacion;
   } else if (reto.tipo === 'Exploradores') {
-    let puntuacion = 50; // Puntos iniciales
+    let puntuacion = 50;
+    
     if (tareas.inicioAS) puntuacion += 25;
     if (tareas.SAI) puntuacion += 25;
     if (tareas.IAR) puntuacion += 25;
@@ -158,7 +188,10 @@ const calcularPuntuacion = () => {
     puntuacion -= penalizacionesLetras * 20;
     puntuacion -= penalizacionesObstaculos * 10;
     
-    puntuacion += tiempoRestante;
+    // Solo sumar tiempo si todas las tareas principales están completas
+    if (verificarTareasCompletas()) {
+      puntuacion += tiempoRestante;
+    }
     
     if (penalizacionesLetras === 0 && penalizacionesObstaculos === 0) {
       puntuacion += 50;
@@ -291,11 +324,11 @@ if (!reto || !equipo || !calificacion) return <div>Cargando...</div>;
 return (
   <RouteGuard allowedRoles={['admin', 'juez']}>
   <div className="container mx-auto p-4">
-    <h1 className="text-2xl font-bold mb-4">Calificar equipo: {equipo.nombre}</h1>
+    <h1 className="text-2xl font-bold mb-2">Calificar equipo: {equipo.nombre}</h1>
     <h2 className="text-xl mb-2">Reto: {reto.nombre}</h2>
 
     {/*TOTALMENTE NUEVO */}
-    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-2">
       <p className="text-sm text-blue-700">
         {reto.tipo === 'LineFollowing' && (
           <>
@@ -323,7 +356,7 @@ return (
       <div>
         <button 
           onClick={iniciarCalificacion}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          className="bg-[#1097d5] text-white px-4 py-2 rounded"
           disabled={calificacion.intentos.length >= (reto.tipo === 'Exploradores' ? 3 : 6)}
         >
           Iniciar Intento {calificacion.intentos.length + 1}
@@ -331,11 +364,19 @@ return (
         
         <button
           onClick={marcarIntentoNoRealizado}
-          className="bg-red-500 text-white px-4 py-2 rounded ml-2"
+          className="bg-[#e94947] text-white px-4 py-2 rounded ml-2"
           disabled={calificacion.intentos.length >= (reto.tipo === 'Exploradores' ? 3 : 6)}
         >
           Marcar Intento como No Realizado
         </button>
+
+        <Link
+          href={`/jueces/retos/${params.retoId}`}
+          className="bg-[#81b71f] text-white px-4 py-3 rounded ml-2"
+        >
+          Regresar al reto
+        </Link>
+        
         
         <div className="mt-4">
           <h3 className="font-bold">Intentos realizados:</h3>
@@ -366,7 +407,7 @@ return (
       </div>
     ) : (
       <div>
-        <p className="text-xl mb-4">Tiempo restante: {tiempoRestante} segundos</p>
+        <p className="text-xl mb-2">Tiempo restante: <span className='text-[#e94947] font-semibold'>{tiempoRestante}</span> segundos</p>
         
         {reto.tipo === 'LineFollowing' && (
           <div className="space-y-2">
@@ -395,7 +436,7 @@ return (
         )}
 
         {reto.tipo === 'FireFighting' && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {Object.entries(tareas).map(([vela, estados]) => (
               <div key={vela} className="border p-4 rounded">
                 <h3 className="font-bold">{vela.toUpperCase()}</h3>
@@ -423,7 +464,7 @@ return (
         )}
 
         {reto.tipo === 'Exploradores' && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div>
               <h3 className="font-bold">Tareas principales</h3>
               {['inicioAS', 'SAI', 'IAR', 'RAFinal'].map((tarea) => (
@@ -460,7 +501,7 @@ return (
                 ))}
               </div>
               <div>
-                <h4>Obstáculos no evadidos</h4>
+                <h4 className="font-bold">Obstáculos no evadidos</h4>
                 {tareas.penalizaciones.obstaculos.map((_, index) => (
                   <div key={`obstaculo-${index}`}>
                     <input 
@@ -478,9 +519,22 @@ return (
         )}
 
         <p className="text-xl mt-4">Puntuación total: {calcularPuntuacion()}</p>
+        {(reto.tipo === 'FireFighting' || reto.tipo === 'Exploradores') && (
+  <div className={`p-4 py-2 rounded-lg mb-2 font-semibold ${
+    verificarTareasCompletas() 
+      ? "bg-green-50 text-green-700 border border-green-200"
+      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+  }`}>
+    <p>
+      {verificarTareasCompletas()
+        ? "✓ El tiempo restante se sumará a la puntuación"
+        : "⚠️ No se cumplieron todas las tareas - el tiempo no se sumará"}
+    </p>
+  </div>
+)}
         <button 
           onClick={enviarCalificacion}
-          className="bg-green-500 text-white px-4 py-2 rounded mt-4"
+          className="bg-green-500 text-white px-4 py-2 rounded mt-2"
         >
           Terminar Calificación
         </button>
