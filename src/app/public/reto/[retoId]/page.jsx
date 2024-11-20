@@ -73,6 +73,8 @@ export default function PublicRetoDetail({ params }) {
     };
   }, [reto?.fase, activeTab, params.retoId]);
 
+  console.log(resultados)
+
   const getRetoIcon = (tipo) => {
     switch (tipo) {
       case 'Exploradores':

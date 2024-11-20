@@ -14,7 +14,8 @@ export default function JuecesPage() {
       try {
         const response = await axios.get('/api/retos');
         /* setRetos(response.data); */
-        setRetos(response.data.filter((reto)=>reto.torneo._id==='671b94d3a5b5f6dabab84f07'));//OJO ESTO NO DEBE SER HARDCODED HAY QUE VER LA FORMA DE MOSTRAR LOS DEL TORNEO EN PROGRESO
+        /* setRetos(response.data.filter((reto)=>reto.torneo._id==='671b94d3a5b5f6dabab84f07')); *///OJO ESTO NO DEBE SER HARDCODED HAY QUE VER LA FORMA DE MOSTRAR LOS DEL TORNEO EN PROGRESO
+        setRetos(response.data);//OJO ESTO NO DEBE SER HARDCODED HAY QUE VER LA FORMA DE MOSTRAR LOS DEL TORNEO EN PROGRESO
       } catch (error) {
         console.error('Error al obtener los retos:', error);
       }
